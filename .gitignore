@@ -1,0 +1,102 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+.eggs/
+*.manifest
+*.spec
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+env.bak/
+
+# Pip / Poetry
+pip-log.txt
+pip-delete-this-directory.txt
+poetry.lock
+poetry.toml
+
+# Jupyter / IPython
+.ipynb_checkpoints
+*.ipynb
+
+# Logs
+*.log
+*.out
+*.err
+
+# Coverage / test
+.coverage
+.tox/
+.nox/
+.coverage.*
+htmlcov/
+.cache/
+.pytest_cache/
+
+# Node / npm
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Build artifacts
+dist/
+build/
+*.tar.gz
+*.egg-info
+
+# Docker
+*.pid
+*.pid.lock
+*.seed
+*.cover
+*.DS_Store
+.dockerignore
+Dockerfile~
+
+# IDE / Editor settings
+.vscode/
+.idea/
+*.swp
+*.swo
+*.bak
+*.tmp
+*~
+
+# OS files
+Thumbs.db
+ehthumbs.db
+.DS_Store
+Desktop.ini
+
+# Firebase / Cloud
+.firebaserc
+.firebase/
+.firebase-tools-cache/
+
+# Local environment
+.env
+.env.*
+*.key
+*.json
+firebase-deployer-key.json
+service-account.json
+
+# Cloud Run build archives
+*.tar
+*.tgz
+
+# Frontend build
+web/.firebase/
+web/.firebaserc
+web/.firebaserc.json
+web/public/*.map

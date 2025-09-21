@@ -1,0 +1,316 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Orbit AI — Test Case Generator</title>
+<style>
+  :root{
+    --bg:#0f1320; --panel:#171c2b; --panel2:#1d2436; --text:#e6ecff; --muted:#9fb0d6;
+    --accent:#6ea8fe; --ok:#34d399; --err:#f87171; --pill:#2b3550; --border:#27314b;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; font-family:Inter,system-ui,Segoe UI,Arial; background:var(--bg); color:var(--text);}
+  header{padding:22px 20px; border-bottom:1px solid var(--border); background:linear-gradient(180deg,#101428,#0f1320);}
+  .wrap{max-width:1000px; margin:0 auto; padding:0 14px;}
+  h1{margin:0; font-size:22px; letter-spacing:.3px;}
+  .muted{color:var(--muted); font-size:13px}
+  .grid{display:grid; gap:12px;}
+  .col2{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .col3{grid-template-columns:repeat(3,minmax(0,1fr));}
+  .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap;}
+  .card{background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:14px;}
+  .section{margin:14px 0;}
+  input, textarea, select{
+    background:var(--panel2); border:1px solid var(--border); color:var(--text);
+    padding:10px 12px; border-radius:10px; width:100%;
+  }
+  textarea{min-height:120px; resize:vertical}
+  button{
+    background:var(--accent); color:#06122b; border:none; padding:10px 14px; border-radius:10px; cursor:pointer; font-weight:600;
+  }
+  button.secondary{background:#2a3551; color:#cfe0ff; border:1px solid var(--border)}
+  button:disabled{opacity:.6; cursor:not-allowed}
+  .pill{display:inline-block; background:var(--pill); border:1px solid var(--border); color:#cfe0ff;
+        padding:6px 10px; border-radius:999px; font-size:12px;}
+  .status{font-size:12px; padding:4px 8px; border-radius:999px; border:1px solid var(--border); background:#202842;}
+  .status.ok{background:#0f2a1f; color:#acf5c7; border-color:#1f6a4f}
+  .status.err{background:#331b1b; color:#ffb4b4; border-color:#6a1f1f}
+  pre{background:#0b0f1c; border:1px dashed #2a3553; padding:12px; border-radius:12px; overflow:auto; max-height:360px}
+  .card h3{margin:0 0 8px 0; font-size:16px;}
+  .tc{background:#12192b; border:1px solid var(--border); border-radius:12px; padding:12px; margin:10px 0;}
+  .tc h4{margin:0 0 6px 0; font-size:15px}
+  .tags{display:flex; gap:6px; flex-wrap:wrap; margin-top:6px}
+  .sep{height:1px; background:var(--border); margin:10px 0}
+  .small{font-size:12px}
+  .link{color:#9ed0ff; text-decoration:none}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap row" style="justify-content:space-between">
+    <div>
+      <h1>Orbit AI — Test Case Generator</h1>
+      <div class="muted">AI-powered generation with compliance & traceability</div>
+    </div>
+    <div class="row">
+      <span id="health" class="status">Ready</span>
+    </div>
+  </div>
+</header>
+
+<main class="wrap" style="padding:16px 14px 32px">
+  <!-- API Setup -->
+  <div class="card section">
+    <h3>API Connection</h3>
+    <div class="grid col2">
+      <div>
+        <label class="small">Cloud Run API URL</label>
+        <input id="api" placeholder="https://orbit-api-xxxx-uc.a.run.app" />
+      </div>
+      <div class="row" style="align-self:end">
+        <button id="saveApi" class="secondary">Save</button>
+        <button id="ping">Ping /health</button>
+      </div>
+    </div>
+    <div class="small muted" style="margin-top:6px">
+      Tip: set your API URL once, it’s stored locally in your browser.
+    </div>
+  </div>
+
+  <!-- Compliance -->
+  <div class="card section">
+    <h3>Compliance Emphasis</h3>
+    <div class="row">
+      <label class="pill"><input id="c62304" type="checkbox" checked style="margin-right:6px"> IEC 62304</label>
+      <label class="pill"><input id="c13485" type="checkbox" checked style="margin-right:6px"> ISO 13485</label>
+      <label class="pill"><input id="c27001" type="checkbox" checked style="margin-right:6px"> ISO 27001</label>
+      <label class="pill"><input id="cgdpr"  type="checkbox" checked style="margin-right:6px"> GDPR</label>
+    </div>
+  </div>
+
+  <!-- Generate by REQ-ID -->
+  <div class="card section">
+    <h3>Generate by REQ-ID</h3>
+    <div class="grid col2">
+      <input id="reqid" placeholder="REQ-0001" />
+      <div class="row" style="align-items:stretch">
+        <button id="byid" style="min-width:160px">Generate</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Generate from Text -->
+  <div class="card section">
+    <h3>Generate from Free Text</h3>
+    <textarea id="text" placeholder="Paste a requirement (no PHI)"></textarea>
+    <div class="row" style="margin-top:8px">
+      <button id="bytext">Generate</button>
+    </div>
+  </div>
+
+  <!-- Upload Document -->
+  <div class="card section">
+    <h3>Upload Requirement Document</h3>
+    <p class="muted small">Supported: PDF, DOCX, TXT, Markdown. We extract text, save the requirement, generate, and return test cases.</p>
+    <div class="grid col2">
+      <div>
+        <label class="small">Title (optional)</label>
+        <input id="upTitle" placeholder="Human-friendly title" />
+      </div>
+      <div>
+        <label class="small">REQ-ID (optional, auto-generated if empty)</label>
+        <input id="upReqId" placeholder="REQ-ABCD12" />
+      </div>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <input id="upFile" type="file" accept=".pdf,.docx,.txt,.md" />
+      <button id="btnUpload">Analyze & Generate</button>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div class="card section">
+    <h3>Results</h3>
+    <div id="summary" class="muted small">No results yet.</div>
+    <div id="cards"></div>
+    <div class="sep"></div>
+    <div class="row">
+      <button id="btnDownloadJson" class="secondary">Download JSON</button>
+      <button id="btnDownloadCsv" class="secondary">Download CSV</button>
+    </div>
+    <div class="sep"></div>
+    <details>
+      <summary class="small">Raw JSON</summary>
+      <pre id="raw"></pre>
+    </details>
+  </div>
+</main>
+
+<script>
+/* -------------------- Utilities -------------------- */
+const DEFAULT_API_URL = ""; // optionally paste your orbit-api url here
+const API_INPUT = document.getElementById('api');
+const HEALTH = document.getElementById('health');
+const SUMMARY = document.getElementById('summary');
+const RAW = document.getElementById('raw');
+const CARDS = document.getElementById('cards');
+
+function qs(id){ return document.getElementById(id); }
+function getApi(){ return (API_INPUT.value || '').trim(); }
+function setBusy(btn, on){
+  btn.disabled = !!on;
+  if(on){ btn.dataset.label = btn.dataset.label || btn.textContent; btn.textContent = 'Working…'; }
+  else if(btn.dataset.label){ btn.textContent = btn.dataset.label; }
+}
+function baseUrl(){ return getApi().replace(/\/+$/,''); }
+function selectedCompliance(){
+  const list=[];
+  if(qs('c62304')?.checked) list.push('IEC 62304');
+  if(qs('c13485')?.checked) list.push('ISO 13485');
+  if(qs('c27001')?.checked) list.push('ISO 27001');
+  if(qs('cgdpr')?.checked)  list.push('GDPR');
+  return list;
+}
+function showRaw(obj){ RAW.textContent = typeof obj==='string' ? obj : JSON.stringify(obj,null,2); }
+function renderCards(items){
+  CARDS.innerHTML = '';
+  (items||[]).forEach(tc=>{
+    const el = document.createElement('div');
+    el.className = 'tc';
+    el.innerHTML = `
+      <h4>${escapeHtml(tc.title || '(no title)')}</h4>
+      <div class="small muted"><b>Test ID:</b> ${escapeHtml(tc.test_id||'-')} &nbsp; <b>REQ:</b> ${escapeHtml(tc.req_id||'-')} &nbsp; <b>Severity:</b> ${escapeHtml(tc.severity||'-')}</div>
+      <div class="sep"></div>
+      <div class="small"><b>Steps</b></div>
+      <ol>${(tc.steps||[]).map(s=>`<li>${escapeHtml(s)}</li>`).join('')}</ol>
+      <div class="small"><b>Expected</b></div>
+      <div class="small muted">${escapeHtml(tc.expected_result||'')}</div>
+      ${tc.preconditions ? `<div class="small"><b>Preconditions</b></div><div class="small muted">${escapeHtml(tc.preconditions)}</div>`:''}
+      <div class="tags">${(tc.compliance_tags||[]).map(t=>`<span class="pill">${escapeHtml(t)}</span>`).join('')}</div>
+      ${tc.trace_link ? `<div class="small" style="margin-top:6px"><a class="link" href="${escapeAttr(tc.trace_link)}" target="_blank">Traceability Link ↗</a></div>`:''}
+    `;
+    CARDS.appendChild(el);
+  });
+}
+function escapeHtml(s){ return String(s??'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function escapeAttr(s){ return String(s??'').replace(/"/g,'&quot;'); }
+
+let lastResult = null;
+function downloadBlob(data, filename, type){
+  const blob = new Blob([data], {type});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+}
+function toCSV(rows){
+  if(!rows?.length) return "req_id,test_id,title,severity,expected_result\n";
+  const headers = ["req_id","test_id","title","severity","expected_result"];
+  const esc = v => `"${String(v ?? "").replace(/"/g,'""')}"`;
+  const lines = [headers.join(",")];
+  for(const r of rows){ lines.push([r.req_id,r.test_id,r.title,r.severity,r.expected_result].map(esc).join(",")); }
+  return lines.join("\n");
+}
+
+/* -------------------- API helpers -------------------- */
+async function post(url, payload){
+  const res = await fetch(url, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(payload || {})
+  });
+  if(!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+/* -------------------- Wire UI -------------------- */
+(function init(){
+  const saved = localStorage.getItem('orbit_api') || DEFAULT_API_URL || '';
+  if(saved) API_INPUT.value = saved;
+  HEALTH.textContent = 'Ready'; HEALTH.className = 'status';
+})();
+
+qs('saveApi').onclick = ()=>{
+  localStorage.setItem('orbit_api', getApi());
+  alert('Saved!');
+};
+
+qs('ping').onclick = async ()=>{
+  try{
+    const url = baseUrl(); if(!url) return alert('Enter API URL first.');
+    HEALTH.textContent='Pinging…'; HEALTH.className='status';
+    const res = await fetch(url+'/health');
+    const ct = (res.headers.get('content-type')||'').toLowerCase();
+    const data = ct.includes('application/json') ? await res.json() : await res.text();
+    if(typeof data === 'object' && data.ok){
+      HEALTH.textContent='OK ✓'; HEALTH.className='status ok';
+    } else {
+      HEALTH.textContent='Unexpected response'; HEALTH.className='status err';
+      alert('Health returned non-JSON or missing ok=true:\n' + (typeof data==='string'?data.slice(0,400):JSON.stringify(data)));
+    }
+  }catch(e){
+    HEALTH.textContent='Error'; HEALTH.className='status err';
+    alert('Health check failed: '+(e?.message||e));
+  }
+};
+
+/* Generate by ID (calls /generate with body so it works with both API shapes) */
+qs('byid').onclick = async function(){
+  try{
+    const base = baseUrl(); if(!base) return alert('Enter API URL first.');
+    const rid = qs('reqid').value.trim(); if(!rid) return alert('Enter a REQ-ID');
+    setBusy(this, true);
+    const data = await post(base + '/generate', { req_id: rid, compliance: selectedCompliance() });
+    SUMMARY.textContent = `Generated ${data.generated} test case(s) for ${data.req_id}`;
+    renderCards(data.test_cases || []); showRaw(data); lastResult = data;
+  }catch(e){ showRaw({error:e?.message||String(e)}); }
+  finally{ setBusy(this,false); }
+};
+
+/* Generate from free text */
+qs('bytext').onclick = async function(){
+  try{
+    const base = baseUrl(); if(!base) return alert('Enter API URL first.');
+    const txt = qs('text').value.trim(); if(!txt) return alert('Paste requirement text');
+    setBusy(this, true);
+    const data = await post(base + '/generate', { text: txt, compliance: selectedCompliance() });
+    SUMMARY.textContent = `Generated ${data.generated} test case(s) for ${data.req_id}`;
+    renderCards(data.test_cases || []); showRaw(data); lastResult = data;
+  }catch(e){ showRaw({error:e?.message||String(e)}); }
+  finally{ setBusy(this,false); }
+};
+
+/* Upload document -> /ingest (multipart) */
+qs('btnUpload').onclick = async function(){
+  try{
+    const base = baseUrl(); if(!base) return alert('Enter API URL first.');
+    const f = qs('upFile').files[0]; if(!f) return alert('Choose a file');
+    const fd = new FormData();
+    fd.append('file', f, f.name);
+    const t = qs('upTitle').value.trim(); if(t) fd.append('title', t);
+    const rid = qs('upReqId').value.trim(); if(rid) fd.append('req_id', rid);
+    fd.append('compliance', JSON.stringify(selectedCompliance()));
+    setBusy(this, true);
+    const res = await fetch(base + '/ingest', { method:'POST', body: fd });
+    if(!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+    SUMMARY.textContent = `Generated ${data.generated} test case(s) for ${data.req_id} (${data.title || 'Uploaded'})`;
+    renderCards(data.test_cases || []); showRaw(data); lastResult = data;
+  }catch(e){ showRaw({error:e?.message||String(e)}); }
+  finally{ setBusy(this,false); }
+};
+
+/* Downloads */
+qs('btnDownloadJson').onclick = ()=>{
+  if(!lastResult) return alert('Nothing to download yet');
+  downloadBlob(JSON.stringify(lastResult,null,2), `${lastResult.req_id || 'generated'}-testcases.json`, 'application/json');
+};
+qs('btnDownloadCsv').onclick = ()=>{
+  if(!lastResult) return alert('Nothing to download yet');
+  downloadBlob(toCSV(lastResult.test_cases || []), `${lastResult.req_id || 'generated'}-testcases.csv`, 'text/csv');
+};
+</script>
+</body>
+</html>
