@@ -17,7 +17,6 @@
   .muted{color:var(--muted); font-size:13px}
   .grid{display:grid; gap:12px;}
   .col2{grid-template-columns:repeat(2,minmax(0,1fr));}
-  .col3{grid-template-columns:repeat(3,minmax(0,1fr));}
   .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap;}
   .card{background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:14px;}
   .section{margin:14px 0;}
@@ -30,6 +29,7 @@
     background:var(--accent); color:#06122b; border:none; padding:10px 14px; border-radius:10px; cursor:pointer; font-weight:600;
   }
   button.secondary{background:#2a3551; color:#cfe0ff; border:1px solid var(--border)}
+  button.ghost{background:transparent; border:1px solid var(--border); color:#cfe0ff}
   button:disabled{opacity:.6; cursor:not-allowed}
   .pill{display:inline-block; background:var(--pill); border:1px solid var(--border); color:#cfe0ff;
         padding:6px 10px; border-radius:999px; font-size:12px;}
@@ -44,6 +44,8 @@
   .sep{height:1px; background:var(--border); margin:10px 0}
   .small{font-size:12px}
   .link{color:#9ed0ff; text-decoration:none}
+  .right{margin-left:auto}
+  .hint{font-size:12px; color:#b9c8ec}
 </style>
 </head>
 <body>
@@ -73,8 +75,8 @@
         <button id="ping">Ping /health</button>
       </div>
     </div>
-    <div class="small muted" style="margin-top:6px">
-      Tip: set your API URL once, it’s stored locally in your browser.
+    <div class="hint" style="margin-top:6px">
+      Backend must hold Jira credentials in env vars (JIRA_BASE, JIRA_USER, JIRA_API_TOKEN, JIRA_PROJECT_KEY).
     </div>
   </div>
 
@@ -138,6 +140,7 @@
     <div class="row">
       <button id="btnDownloadJson" class="secondary">Download JSON</button>
       <button id="btnDownloadCsv" class="secondary">Download CSV</button>
+      <span class="right hint">Tip: Push individual test cases to Jira from their card.</span>
     </div>
     <div class="sep"></div>
     <details>
@@ -158,12 +161,12 @@ const CARDS = document.getElementById('cards');
 
 function qs(id){ return document.getElementById(id); }
 function getApi(){ return (API_INPUT.value || '').trim(); }
+function baseUrl(){ return getApi().replace(/\/+$/,''); }
 function setBusy(btn, on){
   btn.disabled = !!on;
   if(on){ btn.dataset.label = btn.dataset.label || btn.textContent; btn.textContent = 'Working…'; }
   else if(btn.dataset.label){ btn.textContent = btn.dataset.label; }
 }
-function baseUrl(){ return getApi().replace(/\/+$/,''); }
 function selectedCompliance(){
   const list=[];
   if(qs('c62304')?.checked) list.push('IEC 62304');
@@ -173,26 +176,6 @@ function selectedCompliance(){
   return list;
 }
 function showRaw(obj){ RAW.textContent = typeof obj==='string' ? obj : JSON.stringify(obj,null,2); }
-function renderCards(items){
-  CARDS.innerHTML = '';
-  (items||[]).forEach(tc=>{
-    const el = document.createElement('div');
-    el.className = 'tc';
-    el.innerHTML = `
-      <h4>${escapeHtml(tc.title || '(no title)')}</h4>
-      <div class="small muted"><b>Test ID:</b> ${escapeHtml(tc.test_id||'-')} &nbsp; <b>REQ:</b> ${escapeHtml(tc.req_id||'-')} &nbsp; <b>Severity:</b> ${escapeHtml(tc.severity||'-')}</div>
-      <div class="sep"></div>
-      <div class="small"><b>Steps</b></div>
-      <ol>${(tc.steps||[]).map(s=>`<li>${escapeHtml(s)}</li>`).join('')}</ol>
-      <div class="small"><b>Expected</b></div>
-      <div class="small muted">${escapeHtml(tc.expected_result||'')}</div>
-      ${tc.preconditions ? `<div class="small"><b>Preconditions</b></div><div class="small muted">${escapeHtml(tc.preconditions)}</div>`:''}
-      <div class="tags">${(tc.compliance_tags||[]).map(t=>`<span class="pill">${escapeHtml(t)}</span>`).join('')}</div>
-      ${tc.trace_link ? `<div class="small" style="margin-top:6px"><a class="link" href="${escapeAttr(tc.trace_link)}" target="_blank">Traceability Link ↗</a></div>`:''}
-    `;
-    CARDS.appendChild(el);
-  });
-}
 function escapeHtml(s){ return String(s??'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function escapeAttr(s){ return String(s??'').replace(/"/g,'&quot;'); }
 
@@ -214,6 +197,75 @@ function toCSV(rows){
   return lines.join("\n");
 }
 
+/* -------------------- Render test case cards -------------------- */
+function renderCards(items){
+  CARDS.innerHTML = '';
+  (items||[]).forEach(tc=>{
+    const el = document.createElement('div');
+    el.className = 'tc';
+    const summary = tc.title || `Test ${tc.test_id || ''}`.trim();
+    const steps = tc.steps || [];
+    const rid = tc.req_id;
+
+    // Unique ids for per-card controls
+    const jid = `jira-${tc.test_id}`;
+    const btnid = `btn-${tc.test_id}`;
+
+    el.innerHTML = `
+      <div class="row" style="align-items:flex-start">
+        <div style="flex:1 1 auto">
+          <h4>${escapeHtml(tc.title || '(no title)')}</h4>
+          <div class="small muted"><b>Test ID:</b> ${escapeHtml(tc.test_id||'-')} &nbsp; <b>REQ:</b> ${escapeHtml(tc.req_id||'-')} &nbsp; <b>Severity:</b> ${escapeHtml(tc.severity||'-')}</div>
+        </div>
+        <div class="row" style="gap:8px">
+          <button id="${btnid}" class="ghost" title="Create an issue in Jira for this test case">Push to Jira</button>
+          <span id="${jid}" class="small muted"></span>
+        </div>
+      </div>
+
+      <div class="sep"></div>
+      <div class="small"><b>Steps</b></div>
+      <ol>${steps.map(s=>`<li>${escapeHtml(s)}</li>`).join('')}</ol>
+      <div class="small"><b>Expected</b></div>
+      <div class="small muted">${escapeHtml(tc.expected_result||'')}</div>
+      ${tc.preconditions ? `<div class="small"><b>Preconditions</b></div><div class="small muted">${escapeHtml(tc.preconditions)}</div>`:''}
+      <div class="tags">${(tc.compliance_tags||[]).map(t=>`<span class="pill">${escapeHtml(t)}</span>`).join('')}</div>
+      ${tc.trace_link ? `<div class="small" style="margin-top:6px"><a class="link" href="${escapeAttr(tc.trace_link)}" target="_blank">Traceability Link ↗</a></div>`:''}
+    `;
+
+    CARDS.appendChild(el);
+
+    // Wire Jira push
+    const btn = el.querySelector('#'+btnid);
+    const lab = el.querySelector('#'+jid);
+    btn.onclick = async ()=>{
+      try{
+        const base = baseUrl(); if(!base) return alert('Enter API URL first.');
+        setBusy(btn,true); lab.textContent = 'Pushing to Jira…';
+        const res = await fetch(base + '/push/jira', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({
+            req_id: rid,
+            test_id: tc.test_id,
+            summary: summary,
+            steps: steps
+          })
+        });
+        const text = await res.text();
+        if(!res.ok) throw new Error(text);
+        const data = JSON.parse(text);
+        btn.disabled = true;
+        lab.innerHTML = `Pushed: <a class="link" href="${escapeAttr(data.external_url)}" target="_blank">${escapeHtml(data.external_key)}</a>`;
+      }catch(e){
+        lab.textContent = 'Error: ' + (e?.message || String(e));
+      }finally{
+        setBusy(btn,false);
+      }
+    };
+  });
+}
+
 /* -------------------- API helpers -------------------- */
 async function post(url, payload){
   const res = await fetch(url, {
@@ -225,7 +277,7 @@ async function post(url, payload){
   return res.json();
 }
 
-/* -------------------- Wire UI -------------------- */
+/* -------------------- Wire top-level UI -------------------- */
 (function init(){
   const saved = localStorage.getItem('orbit_api') || DEFAULT_API_URL || '';
   if(saved) API_INPUT.value = saved;
@@ -256,7 +308,7 @@ qs('ping').onclick = async ()=>{
   }
 };
 
-/* Generate by ID (calls /generate with body so it works with both API shapes) */
+/* Generate by ID */
 qs('byid').onclick = async function(){
   try{
     const base = baseUrl(); if(!base) return alert('Enter API URL first.');
@@ -282,7 +334,7 @@ qs('bytext').onclick = async function(){
   finally{ setBusy(this,false); }
 };
 
-/* Upload document -> /ingest (multipart) */
+/* Upload document -> /ingest */
 qs('btnUpload').onclick = async function(){
   try{
     const base = baseUrl(); if(!base) return alert('Enter API URL first.');

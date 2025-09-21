@@ -6,16 +6,19 @@ from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+import requests
+
+# Vertex AI / BigQuery
 import vertexai
 from vertexai.generative_models import GenerativeModel, GenerationConfig
 from google.cloud import bigquery
 
-# Optional parsers
+# Optional parsers for uploads
 from pypdf import PdfReader
 from docx import Document
 from io import BytesIO
 
-# ----------- Config -----------
+# -------------------- Config --------------------
 PROJECT_ID   = os.getenv("PROJECT_ID", "orbit-ai-472708")
 LOCATION     = os.getenv("LOCATION", "us-central1")
 MODEL_NAME   = os.getenv("MODEL_NAME", "gemini-2.0-flash-001")
@@ -24,10 +27,19 @@ PROMPT_PATH  = os.getenv("PROMPT_PATH", "prompts/prompt_poc_v1.txt")
 PROMPT_VER   = os.getenv("PROMPT_VERSION", "poc-v1")
 CREATED_BY   = os.getenv("CREATED_BY", "demo@orbit-ai")
 
-TABLE_REQ = f"{PROJECT_ID}.{DATASET}.requirements"
-TABLE_TC  = f"{PROJECT_ID}.{DATASET}.generated_testcases"
+# Jira (set these in Cloud Run env)
+JIRA_BASE = os.getenv("JIRA_BASE")                 # e.g. https://your-site.atlassian.net
+JIRA_USER = os.getenv("JIRA_USER")                 # Atlassian account email
+JIRA_API_TOKEN = os.getenv("JIRA_API_TOKEN")       # API token from https://id.atlassian.com
+JIRA_PROJECT_KEY = os.getenv("JIRA_PROJECT_KEY")   # e.g. TEST
+JIRA_ISSUE_TYPE = os.getenv("JIRA_ISSUE_TYPE", "Task")  # "Task" works on free plan
 
-# ----------- Lazy Clients -----------
+# Tables / Views
+TABLE_REQ  = f"{PROJECT_ID}.{DATASET}.requirements"
+TABLE_TC   = f"{PROJECT_ID}.{DATASET}.generated_testcases"
+TABLE_TRL  = f"{PROJECT_ID}.{DATASET}.trace_links"
+
+# -------------------- Lazy Clients --------------------
 _bq = None
 _vertex_ready = False
 
@@ -46,28 +58,30 @@ def ensure_vertex():
         vertexai.init(project=PROJECT_ID, location=LOCATION)
         _vertex_ready = True
 
-# ----------- FastAPI App -----------
-app = FastAPI(title="Orbit AI Test Case Generator API", version="0.2")
+# -------------------- FastAPI App --------------------
+app = FastAPI(title="Orbit AI Test Case Generator API", version="0.3")
 
+# Open CORS for PoC; restrict to your web origin later
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],   # tighten later to your orbit-web URL
+    allow_origins=["*"],
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ----------- Helpers -----------
+# -------------------- Helpers --------------------
 def load_prompt() -> str:
     try:
         with open(PROMPT_PATH, "r", encoding="utf-8") as f:
             return f.read()
     except Exception:
+        # Minimal safe fallback
         return (
             "You are an expert QA engineer for healthcare software.\n"
             "Requirement ID: {{req_id}}\n"
             "Requirement Text:\n{{requirement_text}}\n\n"
-            "Return JSON with field 'test_cases' as an array of objects having:\n"
+            "Return STRICT JSON with key 'test_cases' as an array. Each item has:\n"
             "test_id, title, steps (array), expected_result, preconditions, severity,\n"
             "compliance_tags (array), trace_link.\n"
         )
@@ -80,6 +94,7 @@ def fill_prompt(template: str, req_id: str, text: str, compliance: Optional[List
     return template.replace("{{req_id}}", req_id).replace("{{requirement_text}}", text + tip)
 
 def extract_json(text: str) -> str:
+    # Strip markdown fences and pull the first JSON object
     cleaned = re.sub(r"^```(?:json)?|```$", "", text.strip(), flags=re.MULTILINE)
     m = re.search(r"\{.*\}", cleaned, flags=re.DOTALL)
     return m.group(0) if m else cleaned
@@ -94,7 +109,7 @@ def call_model(prompt: str) -> str:
     parts = resp.candidates[0].content.parts if resp.candidates else []
     return "".join(getattr(p, "text", "") for p in parts)
 
-def save_rows(req_id: str, tcs: List[dict]) -> List[dict]:
+def save_testcases(req_id: str, tcs: List[dict]) -> List[dict]:
     rows = []
     for tc in tcs:
         rows.append({
@@ -116,7 +131,7 @@ def save_rows(req_id: str, tcs: List[dict]) -> List[dict]:
         })
     errs = get_bq().insert_rows_json(TABLE_TC, rows)
     if errs:
-        raise RuntimeError(f"BigQuery insert errors: {errs}")
+        raise HTTPException(500, f"BigQuery insert errors: {errs}")
     return rows
 
 def sniff_extract_text(filename: str, content: bytes) -> str:
@@ -144,36 +159,123 @@ def upsert_requirement(req_id: str, title: str, text: str):
     }]
     errs = get_bq().insert_rows_json(TABLE_REQ, row)
     if errs:
-        # ignore duplicates
-        if not any("duplicate" in str(e).lower() for e in errs):
-            raise RuntimeError(errs)
+        # ignore duplicates by req_id
+        msg = " ".join(str(e) for e in errs)
+        if "duplicate" not in msg.lower():
+            raise HTTPException(500, f"Requirement upsert failed: {errs}")
 
-# ----------- Schemas -----------
+def save_trace_link(req_id: str, test_id: str, system: str, key: str, url: str):
+    rows = [{
+        "req_id": req_id,
+        "test_id": test_id,
+        "external_system": system,
+        "external_key": key,
+        "external_url": url,
+        "created_at": now_ts(),
+        "created_by": CREATED_BY,
+    }]
+    errs = get_bq().insert_rows_json(TABLE_TRL, rows)
+    if errs:
+        raise HTTPException(500, f"Trace insert failed: {errs}")
+
+# -------------------- Schemas --------------------
 class GenerateBody(BaseModel):
     req_id: Optional[str] = None
     text: Optional[str] = None
     compliance: Optional[List[str]] = None
 
-# ----------- Routes -----------
+class PushBody(BaseModel):
+    req_id: str
+    test_id: str
+    summary: str
+    steps: Optional[List[str]] = None
+
+
+def build_adf_description(summary: str, steps: Optional[List[str]] = None, expected: Optional[str] = None) -> dict:
+    """
+    Build an Atlassian Document Format (ADF) description.
+    https://developer.atlassian.com/cloud/jira/platform/apis/document/structure/
+    """
+    doc = {
+        "version": 1,
+        "type": "doc",
+        "content": []
+    }
+
+    # Summary paragraph
+    if summary:
+        doc["content"].append({
+            "type": "paragraph",
+            "content": [{"type": "text", "text": summary}]
+        })
+
+    # Steps list
+    if steps:
+        # Heading "Steps"
+        doc["content"].append({
+            "type": "heading",
+            "attrs": {"level": 3},
+            "content": [{"type": "text", "text": "Steps"}]
+        })
+        # Ordered list
+        ol = {"type": "orderedList", "attrs": {"order": 1}, "content": []}
+        for s in steps:
+            ol["content"].append({
+                "type": "listItem",
+                "content": [{
+                    "type": "paragraph",
+                    "content": [{"type": "text", "text": s}]
+                }]
+            })
+        doc["content"].append(ol)
+
+    if expected:
+        doc["content"].append({
+            "type": "heading",
+            "attrs": {"level": 3},
+            "content": [{"type": "text", "text": "Expected Result"}]
+        })
+        doc["content"].append({
+            "type": "paragraph",
+            "content": [{"type": "text", "text": expected}]
+        })
+
+    # Fallback if empty
+    if not doc["content"]:
+        doc["content"].append({"type": "paragraph", "content": [{"type": "text", "text": ""}]})
+
+    return doc
+
+
+
+# -------------------- Routes --------------------
 @app.get("/health")
 def health():
-    return {"ok": True, "project": PROJECT_ID, "model": MODEL_NAME}
+    return {
+        "ok": True,
+        "project": PROJECT_ID,
+        "model": MODEL_NAME,
+        "bq": TABLE_TC,
+        "jira": bool(JIRA_BASE and JIRA_USER and JIRA_API_TOKEN and JIRA_PROJECT_KEY),
+    }
 
 @app.post("/generate")
 def generate(body: GenerateBody):
     rid = (body.req_id or f"REQ-{uuid.uuid4().hex[:6].upper()}").strip()
 
     if not body.text and body.req_id:
+        # fetch requirement text from BQ by req_id
         job = get_bq().query(
             f"SELECT text FROM `{TABLE_REQ}` WHERE req_id=@rid",
             job_config=bigquery.QueryJobConfig(
-                query_parameters=[bigquery.ScalarQueryParameter("rid","STRING", body.req_id)]
+                query_parameters=[bigquery.ScalarQueryParameter("rid", "STRING", body.req_id)]
             ),
         )
         row = next(iter(job.result()), None)
         if not row:
             raise HTTPException(404, f"Requirement {body.req_id} not found")
         text = (row["text"] or "").strip()
+        rid = body.req_id
     else:
         text = (body.text or "").strip()
 
@@ -192,7 +294,7 @@ def generate(body: GenerateBody):
     if not isinstance(tcs, list) or not tcs:
         raise HTTPException(500, "Model returned no test_cases")
 
-    saved = save_rows(rid, tcs)
+    saved = save_testcases(rid, tcs)
     return {"req_id": rid, "generated": len(saved), "test_cases": saved}
 
 @app.post("/generate/{req_id}")
@@ -233,5 +335,49 @@ async def ingest_requirement(
     if not isinstance(tcs, list) or not tcs:
         raise HTTPException(500, "Model returned no test_cases")
 
-    saved = save_rows(rid, tcs)
+    saved = save_testcases(rid, tcs)
     return {"req_id": rid, "generated": len(saved), "test_cases": saved, "title": title or file.filename}
+
+@app.post("/push/jira")
+def push_jira(body: PushBody):
+    # Validate config
+    if not (JIRA_BASE and JIRA_USER and JIRA_API_TOKEN and JIRA_PROJECT_KEY):
+        raise HTTPException(
+            500,
+            "Jira env vars missing. Set JIRA_BASE, JIRA_USER, JIRA_API_TOKEN, JIRA_PROJECT_KEY (and optional JIRA_ISSUE_TYPE)."
+        )
+
+    # Build ADF description (we don’t have expected here; you could extend PushBody to include it)
+    adf = build_adf_description(
+        summary=body.summary or f"Test Case {body.test_id}",
+        steps=body.steps or None,
+        expected=None
+    )
+
+    url = f"{JIRA_BASE}/rest/api/3/issue"
+    payload = {
+        "fields": {
+            "project": {"key": JIRA_PROJECT_KEY},
+            "summary": body.summary or f"Test Case {body.test_id}",
+            "description": adf,  # ADF document (required by v3)
+            "labels": ["orbit-ai", "test-case"],
+            "issuetype": {"name": JIRA_ISSUE_TYPE}  # "Task" works on free Jira
+        }
+    }
+
+    # Using basic auth (email + API token)
+    r = requests.post(
+        url,
+        json=payload,
+        auth=(JIRA_USER, JIRA_API_TOKEN),
+        headers={"Accept": "application/json", "Content-Type": "application/json"}
+    )
+    if r.status_code not in (200, 201):
+        raise HTTPException(500, f"Jira push failed: {r.text}")
+
+    data = r.json()
+    issue_key = data.get("key")
+    issue_url = f"{JIRA_BASE}/browse/{issue_key}"
+
+    save_trace_link(body.req_id, body.test_id, "Jira", issue_key, issue_url)
+    return {"ok": True, "external_key": issue_key, "external_url": issue_url}
