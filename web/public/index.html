@@ -6,181 +6,203 @@
 <title>Orbit AI — Test Case Generator</title>
 <style>
   :root{
-    --bg:#0f1320; --panel:#171c2b; --panel2:#1d2436; --text:#e6ecff; --muted:#9fb0d6;
-    --accent:#6ea8fe; --ok:#34d399; --err:#f87171; --pill:#2b3550; --border:#27314b;
+    /* Theme */
+    --bg:#f7f8fb;
+    --text:#111827;
+    --muted:#6b7280;
+    --card:#ffffff;
+    --border:#e5e7eb;
+    --accent:#5b8def;     /* primary */
+    --accent-2:#172554;   /* deep navy */
+    --ok:#10b981;
+    --err:#ef4444;
+
+    /* Sizing */
+    --radius:14px;
+    --shadow:0 10px 24px rgba(2,21,60,.08), 0 2px 6px rgba(2,21,60,.06);
   }
   *{box-sizing:border-box}
-  body{margin:0; font-family:Inter,system-ui,Segoe UI,Arial; background:var(--bg); color:var(--text);}
-  header{padding:22px 20px; border-bottom:1px solid var(--border); background:linear-gradient(180deg,#101428,#0f1320);}
-  .wrap{max-width:1000px; margin:0 auto; padding:0 14px;}
-  h1{margin:0; font-size:22px; letter-spacing:.3px;}
-  .muted{color:var(--muted); font-size:13px}
-  .grid{display:grid; gap:12px;}
-  .col2{grid-template-columns:repeat(2,minmax(0,1fr));}
-  .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap;}
-  .card{background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:14px;}
-  .section{margin:14px 0;}
-  input, textarea, select{
-    background:var(--panel2); border:1px solid var(--border); color:var(--text);
-    padding:10px 12px; border-radius:10px; width:100%;
+  html,body{margin:0;height:100%}
+  body{font-family:Inter,system-ui,Segoe UI,Arial; color:var(--text); background:var(--bg);}
+
+  /* Header */
+  header{
+    background:
+      radial-gradient(1200px 300px at 10% -20%, #cfe1ff 0%, transparent 60%),
+      radial-gradient(900px 300px at 90% -20%, #ffe4e6 0%, transparent 60%),
+      linear-gradient(180deg,#fff,#f7f8fb);
+    border-bottom:1px solid var(--border);
+  }
+  .wrap{max-width:1000px; margin:0 auto; padding:0 16px;}
+  .bar{display:flex; align-items:center; gap:12px; padding:20px 0;}
+  h1{font-size:20px; margin:0; letter-spacing:.2px;}
+  .sub{color:var(--muted); font-size:13px; margin-top:4px;}
+  .right{margin-left:auto}
+
+  /* Cards, inputs, buttons */
+  .card{background:var(--card); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px; margin:16px 0;}
+  .title{font-weight:600; margin:0 0 8px 0;}
+  .row{display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .grid{display:grid; gap:12px}
+  .col2{grid-template-columns:repeat(2,minmax(0,1fr))}
+
+  input[type="text"], input[type="url"], textarea{
+    width:100%; border:1px solid var(--border); border-radius:12px; padding:10px 12px;
+    background:#fff; color:var(--text); outline:none;
   }
   textarea{min-height:120px; resize:vertical}
-  button{
-    background:var(--accent); color:#06122b; border:none; padding:10px 14px; border-radius:10px; cursor:pointer; font-weight:600;
+
+  .btn{
+    appearance:none; border:none; border-radius:12px; padding:10px 14px; font-weight:600; cursor:pointer;
+    background:var(--accent); color:white; box-shadow:0 6px 16px rgba(91,141,239,.25);
   }
-  button.secondary{background:#2a3551; color:#cfe0ff; border:1px solid var(--border)}
-  button.ghost{background:transparent; border:1px solid var(--border); color:#cfe0ff}
-  button:disabled{opacity:.6; cursor:not-allowed}
-  .pill{display:inline-block; background:var(--pill); border:1px solid var(--border); color:#cfe0ff;
-        padding:6px 10px; border-radius:999px; font-size:12px;}
-  .status{font-size:12px; padding:4px 8px; border-radius:999px; border:1px solid var(--border); background:#202842;}
-  .status.ok{background:#0f2a1f; color:#acf5c7; border-color:#1f6a4f}
-  .status.err{background:#331b1b; color:#ffb4b4; border-color:#6a1f1f}
-  pre{background:#0b0f1c; border:1px dashed #2a3553; padding:12px; border-radius:12px; overflow:auto; max-height:360px}
-  .card h3{margin:0 0 8px 0; font-size:16px;}
-  .tc{background:#12192b; border:1px solid var(--border); border-radius:12px; padding:12px; margin:10px 0;}
+  .btn:hover{filter:brightness(.97)}
+  .btn.secondary{background:#eef2ff; color:#1e293b; box-shadow:none; border:1px solid var(--border)}
+  .btn.ghost{background:transparent; color:#1f2937; border:1px solid var(--border); box-shadow:none}
+  .btn:disabled{opacity:.6; cursor:not-allowed}
+
+  .hint{font-size:12px; color:var(--muted)}
+  .status{font-size:12px; border-radius:999px; padding:6px 10px; border:1px solid var(--border); background:#f3f4f6}
+  .status.ok{background:#ecfdf5; color:#065f46; border-color:#a7f3d0}
+  .status.err{background:#fef2f2; color:#991b1b; border-color:#fecaca}
+
+  .sep{height:1px; background:var(--border); margin:12px 0}
+  .list{margin:0; padding-left:18px}
+  .pill{display:inline-block; font-size:12px; padding:6px 10px; border-radius:999px; background:#f1f5f9; border:1px solid var(--border); color:#0f172a}
+
+  /* Test cards */
+  .tc{border:1px solid var(--border); border-radius:12px; padding:12px; background:#fff; margin:10px 0;}
   .tc h4{margin:0 0 6px 0; font-size:15px}
-  .tags{display:flex; gap:6px; flex-wrap:wrap; margin-top:6px}
-  .sep{height:1px; background:var(--border); margin:10px 0}
-  .small{font-size:12px}
-  .link{color:#9ed0ff; text-decoration:none}
-  .right{margin-left:auto}
-  .hint{font-size:12px; color:#b9c8ec}
+  .tc .meta{font-size:12px; color:var(--muted)}
+  .tc .act{display:flex; gap:8px; align-items:center; margin-left:auto}
+  .tc .link{color:#1d4ed8; text-decoration:none}
+
+  /* Toasts */
+  .toast{
+    position:fixed; right:18px; bottom:18px; background:#111827; color:#fff;
+    padding:10px 14px; border-radius:12px; box-shadow:var(--shadow); font-size:14px; opacity:0; transform:translateY(8px);
+    transition:all .25s ease;
+  }
+  .toast.show{opacity:1; transform:translateY(0)}
+  .toast.ok{background:#065f46}
+  .toast.err{background:#991b1b}
+
+  /* Loader */
+  .spinner{display:inline-block; width:16px; height:16px; border-radius:50%; border:2px solid rgba(0,0,0,.1); border-left-color:#fff; animation:spin .7s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* Footer */
+  footer{color:var(--muted); font-size:12px; text-align:center; padding:18px 0 26px}
 </style>
 </head>
 <body>
 <header>
-  <div class="wrap row" style="justify-content:space-between">
-    <div>
-      <h1>Orbit AI — Test Case Generator</h1>
-      <div class="muted">AI-powered generation with compliance & traceability</div>
-    </div>
-    <div class="row">
-      <span id="health" class="status">Ready</span>
+  <div class="wrap">
+    <div class="bar">
+      <div>
+        <h1>Orbit AI — Test Case Generator</h1>
+        <div class="sub">Generate test cases from requirements, upload docs, and push to Jira.</div>
+      </div>
+      <div class="right"><span id="health" class="status">Ready</span></div>
     </div>
   </div>
 </header>
 
-<main class="wrap" style="padding:16px 14px 32px">
-  <!-- API Setup -->
-  <div class="card section">
-    <h3>API Connection</h3>
+<main class="wrap" style="padding:16px 0 24px">
+  <!-- API -->
+  <section class="card">
+    <div class="title">API Connection</div>
     <div class="grid col2">
-      <div>
-        <label class="small">Cloud Run API URL</label>
-        <input id="api" placeholder="https://orbit-api-xxxx-uc.a.run.app" />
-      </div>
-      <div class="row" style="align-self:end">
-        <button id="saveApi" class="secondary">Save</button>
-        <button id="ping">Ping /health</button>
+      <input id="api" type="url" placeholder="https://orbit-api-xxxx-uc.a.run.app" />
+      <div class="row" style="align-items:stretch">
+        <button id="saveApi" class="btn secondary">Save</button>
+        <button id="ping" class="btn">Ping /health</button>
       </div>
     </div>
     <div class="hint" style="margin-top:6px">
-      Backend must hold Jira credentials in env vars (JIRA_BASE, JIRA_USER, JIRA_API_TOKEN, JIRA_PROJECT_KEY).
+      Ensure this points to your <b>orbit-api</b> Cloud Run URL (not the web URL).
     </div>
-  </div>
+  </section>
 
-  <!-- Compliance -->
-  <div class="card section">
-    <h3>Compliance Emphasis</h3>
-    <div class="row">
-      <label class="pill"><input id="c62304" type="checkbox" checked style="margin-right:6px"> IEC 62304</label>
-      <label class="pill"><input id="c13485" type="checkbox" checked style="margin-right:6px"> ISO 13485</label>
-      <label class="pill"><input id="c27001" type="checkbox" checked style="margin-right:6px"> ISO 27001</label>
-      <label class="pill"><input id="cgdpr"  type="checkbox" checked style="margin-right:6px"> GDPR</label>
-    </div>
-  </div>
-
-  <!-- Generate by REQ-ID -->
-  <div class="card section">
-    <h3>Generate by REQ-ID</h3>
+  <!-- Generate by ID
+  <section class="card">
+    <div class="title">Generate by REQ-ID</div>
     <div class="grid col2">
-      <input id="reqid" placeholder="REQ-0001" />
-      <div class="row" style="align-items:stretch">
-        <button id="byid" style="min-width:160px">Generate</button>
-      </div>
+      <input id="reqid" type="text" placeholder="REQ-0001" />
+      <button id="byid" class="btn">Generate</button>
     </div>
-  </div>
+  </section> -->
 
-  <!-- Generate from Text -->
-  <div class="card section">
-    <h3>Generate from Free Text</h3>
+  <!-- Generate by text -->
+  <section class="card">
+    <div class="title">Generate from Free Text</div>
     <textarea id="text" placeholder="Paste a requirement (no PHI)"></textarea>
     <div class="row" style="margin-top:8px">
-      <button id="bytext">Generate</button>
+      <button id="bytext" class="btn">Generate</button>
     </div>
-  </div>
+  </section>
 
-  <!-- Upload Document -->
-  <div class="card section">
-    <h3>Upload Requirement Document</h3>
-    <p class="muted small">Supported: PDF, DOCX, TXT, Markdown. We extract text, save the requirement, generate, and return test cases.</p>
+  <!-- Upload -->
+  <section class="card">
+    <div class="title">Upload Requirement Document</div>
     <div class="grid col2">
-      <div>
-        <label class="small">Title (optional)</label>
-        <input id="upTitle" placeholder="Human-friendly title" />
-      </div>
-      <div>
-        <label class="small">REQ-ID (optional, auto-generated if empty)</label>
-        <input id="upReqId" placeholder="REQ-ABCD12" />
-      </div>
+      <input id="upTitle" type="text" placeholder="Optional title" />
+      <input id="upReqId" type="text" placeholder="REQ-ID (optional)" />
     </div>
     <div class="row" style="margin-top:8px">
       <input id="upFile" type="file" accept=".pdf,.docx,.txt,.md" />
-      <button id="btnUpload">Analyze & Generate</button>
+      <button id="btnUpload" class="btn">Analyze & Generate</button>
     </div>
-  </div>
+    <div class="hint" style="margin-top:6px">PDF, DOCX, TXT, Markdown supported.</div>
+  </section>
 
   <!-- Results -->
-  <div class="card section">
-    <h3>Results</h3>
-    <div id="summary" class="muted small">No results yet.</div>
-    <div id="cards"></div>
-    <div class="sep"></div>
+  <section class="card">
     <div class="row">
-      <button id="btnDownloadJson" class="secondary">Download JSON</button>
-      <button id="btnDownloadCsv" class="secondary">Download CSV</button>
-      <span class="right hint">Tip: Push individual test cases to Jira from their card.</span>
+      <div class="title" style="margin:0">Results</div>
+      <div class="right row">
+        <button id="btnDownloadJson" class="btn secondary">Download JSON</button>
+        <button id="btnDownloadCsv" class="btn secondary">Download CSV</button>
+      </div>
     </div>
-    <div class="sep"></div>
-    <details>
-      <summary class="small">Raw JSON</summary>
-      <pre id="raw"></pre>
-    </details>
-  </div>
+    <div id="summary" class="hint">No results yet.</div>
+    <div id="cards" style="margin-top:6px"></div>
+  </section>
 </main>
 
+<footer class="wrap">© Orbit AI — PoC</footer>
+
+<!-- Toast -->
+<div id="toast" class="toast"></div>
+
 <script>
-/* -------------------- Utilities -------------------- */
-const DEFAULT_API_URL = ""; // optionally paste your orbit-api url here
-const API_INPUT = document.getElementById('api');
+/* ----------- Utilities ----------- */
+const API = document.getElementById('api');
 const HEALTH = document.getElementById('health');
 const SUMMARY = document.getElementById('summary');
-const RAW = document.getElementById('raw');
 const CARDS = document.getElementById('cards');
+const TOAST = document.getElementById('toast');
 
-function qs(id){ return document.getElementById(id); }
-function getApi(){ return (API_INPUT.value || '').trim(); }
-function baseUrl(){ return getApi().replace(/\/+$/,''); }
+function toast(msg, type){ // type: '', 'ok', 'err'
+  TOAST.textContent = msg;
+  TOAST.className = 'toast ' + (type||'');
+  setTimeout(()=>TOAST.classList.add('show'), 10);
+  setTimeout(()=>TOAST.classList.remove('show'), 2500);
+}
+
 function setBusy(btn, on){
   btn.disabled = !!on;
-  if(on){ btn.dataset.label = btn.dataset.label || btn.textContent; btn.textContent = 'Working…'; }
-  else if(btn.dataset.label){ btn.textContent = btn.dataset.label; }
+  if(on){ btn.dataset.label = btn.dataset.label || btn.textContent; btn.innerHTML = '<span class="spinner"></span>'; }
+  else if(btn.dataset.label){ btn.textContent = btn.dataset.label; btn.dataset.label = ''; }
 }
-function selectedCompliance(){
-  const list=[];
-  if(qs('c62304')?.checked) list.push('IEC 62304');
-  if(qs('c13485')?.checked) list.push('ISO 13485');
-  if(qs('c27001')?.checked) list.push('ISO 27001');
-  if(qs('cgdpr')?.checked)  list.push('GDPR');
-  return list;
-}
-function showRaw(obj){ RAW.textContent = typeof obj==='string' ? obj : JSON.stringify(obj,null,2); }
-function escapeHtml(s){ return String(s??'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-function escapeAttr(s){ return String(s??'').replace(/"/g,'&quot;'); }
+function baseUrl(){ return (API.value||'').trim().replace(/\/+$/,''); }
+function showSummary(text){ SUMMARY.textContent = text; }
+function esc(s){ return String(s??'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function escAttr(s){ return String(s??'').replace(/"/g,'&quot;'); }
 
 let lastResult = null;
-function downloadBlob(data, filename, type){
+
+function download(filename, data, type){
   const blob = new Blob([data], {type});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -188,180 +210,164 @@ function downloadBlob(data, filename, type){
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
 }
+
 function toCSV(rows){
   if(!rows?.length) return "req_id,test_id,title,severity,expected_result\n";
   const headers = ["req_id","test_id","title","severity","expected_result"];
-  const esc = v => `"${String(v ?? "").replace(/"/g,'""')}"`;
+  const q = v=>`"${String(v??'').replace(/"/g,'""')}"`;
   const lines = [headers.join(",")];
-  for(const r of rows){ lines.push([r.req_id,r.test_id,r.title,r.severity,r.expected_result].map(esc).join(",")); }
+  for(const r of rows){ lines.push([r.req_id,r.test_id,r.title,r.severity,r.expected_result].map(q).join(",")); }
   return lines.join("\n");
 }
 
-/* -------------------- Render test case cards -------------------- */
+/* ----------- Render ----------- */
 function renderCards(items){
   CARDS.innerHTML = '';
   (items||[]).forEach(tc=>{
     const el = document.createElement('div');
     el.className = 'tc';
-    const summary = tc.title || `Test ${tc.test_id || ''}`.trim();
     const steps = tc.steps || [];
-    const rid = tc.req_id;
-
-    // Unique ids for per-card controls
-    const jid = `jira-${tc.test_id}`;
-    const btnid = `btn-${tc.test_id}`;
+    const btnId = `push-${tc.test_id}`;
+    const labId = `lab-${tc.test_id}`;
 
     el.innerHTML = `
-      <div class="row" style="align-items:flex-start">
+      <div class="row">
         <div style="flex:1 1 auto">
-          <h4>${escapeHtml(tc.title || '(no title)')}</h4>
-          <div class="small muted"><b>Test ID:</b> ${escapeHtml(tc.test_id||'-')} &nbsp; <b>REQ:</b> ${escapeHtml(tc.req_id||'-')} &nbsp; <b>Severity:</b> ${escapeHtml(tc.severity||'-')}</div>
+          <h4>${esc(tc.title || '(no title)')}</h4>
+          <div class="meta">Test: ${esc(tc.test_id||'-')} • REQ: ${esc(tc.req_id||'-')} • Severity: ${esc(tc.severity||'-')}</div>
         </div>
-        <div class="row" style="gap:8px">
-          <button id="${btnid}" class="ghost" title="Create an issue in Jira for this test case">Push to Jira</button>
-          <span id="${jid}" class="small muted"></span>
+        <div class="act">
+          <button id="${btnId}" class="btn ghost">Push to Jira</button>
+          <span id="${labId}" class="hint"></span>
         </div>
       </div>
-
       <div class="sep"></div>
-      <div class="small"><b>Steps</b></div>
-      <ol>${steps.map(s=>`<li>${escapeHtml(s)}</li>`).join('')}</ol>
-      <div class="small"><b>Expected</b></div>
-      <div class="small muted">${escapeHtml(tc.expected_result||'')}</div>
-      ${tc.preconditions ? `<div class="small"><b>Preconditions</b></div><div class="small muted">${escapeHtml(tc.preconditions)}</div>`:''}
-      <div class="tags">${(tc.compliance_tags||[]).map(t=>`<span class="pill">${escapeHtml(t)}</span>`).join('')}</div>
-      ${tc.trace_link ? `<div class="small" style="margin-top:6px"><a class="link" href="${escapeAttr(tc.trace_link)}" target="_blank">Traceability Link ↗</a></div>`:''}
+      <div class="hint" style="margin-bottom:4px"><b>Steps</b></div>
+      <ol class="list">${steps.map(s=>`<li>${esc(s)}</li>`).join('')}</ol>
+      <div class="hint" style="margin-top:6px"><b>Expected</b></div>
+      <div class="hint">${esc(tc.expected_result||'')}</div>
+      ${tc.trace_link ? `<div style="margin-top:8px"><a class="link" href="${escAttr(tc.trace_link)}" target="_blank">Traceability Link ↗</a></div>`:``}
     `;
-
     CARDS.appendChild(el);
 
     // Wire Jira push
-    const btn = el.querySelector('#'+btnid);
-    const lab = el.querySelector('#'+jid);
+    const btn = el.querySelector('#'+btnId);
+    const lab = el.querySelector('#'+labId);
     btn.onclick = async ()=>{
       try{
-        const base = baseUrl(); if(!base) return alert('Enter API URL first.');
-        setBusy(btn,true); lab.textContent = 'Pushing to Jira…';
+        const base = baseUrl(); if(!base) return toast('Enter API URL', 'err');
+        setBusy(btn,true); lab.textContent = 'Pushing…';
         const res = await fetch(base + '/push/jira', {
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({
-            req_id: rid,
-            test_id: tc.test_id,
-            summary: summary,
-            steps: steps
-          })
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ req_id: tc.req_id, test_id: tc.test_id, summary: tc.title, steps })
         });
-        const text = await res.text();
-        if(!res.ok) throw new Error(text);
-        const data = JSON.parse(text);
+        const txt = await res.text();
+        if(!res.ok) throw new Error(txt);
+        const data = JSON.parse(txt);
         btn.disabled = true;
-        lab.innerHTML = `Pushed: <a class="link" href="${escapeAttr(data.external_url)}" target="_blank">${escapeHtml(data.external_key)}</a>`;
+        lab.innerHTML = `Created: <a class="link" href="${escAttr(data.external_url)}" target="_blank">${esc(data.external_key)}</a>`;
+        toast('Pushed to Jira', 'ok');
       }catch(e){
-        lab.textContent = 'Error: ' + (e?.message || String(e));
-      }finally{
-        setBusy(btn,false);
-      }
+        lab.textContent = 'Error';
+        toast((e?.message||String(e)).slice(0,180), 'err');
+      }finally{ setBusy(btn,false); }
     };
   });
 }
 
-/* -------------------- API helpers -------------------- */
+/* ----------- API helpers ----------- */
 async function post(url, payload){
   const res = await fetch(url, {
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body: JSON.stringify(payload || {})
+    body: JSON.stringify(payload||{})
   });
   if(!res.ok) throw new Error(await res.text());
   return res.json();
 }
 
-/* -------------------- Wire top-level UI -------------------- */
+/* ----------- Init / Wire ----------- */
 (function init(){
-  const saved = localStorage.getItem('orbit_api') || DEFAULT_API_URL || '';
-  if(saved) API_INPUT.value = saved;
-  HEALTH.textContent = 'Ready'; HEALTH.className = 'status';
+  const saved = localStorage.getItem('orbit_api') || '';
+  if(saved) API.value = saved;
+  HEALTH.textContent = 'Ready';
 })();
 
-qs('saveApi').onclick = ()=>{
-  localStorage.setItem('orbit_api', getApi());
-  alert('Saved!');
+document.getElementById('saveApi').onclick = ()=>{
+  localStorage.setItem('orbit_api', baseUrl());
+  toast('API URL saved', 'ok');
 };
 
-qs('ping').onclick = async ()=>{
+document.getElementById('ping').onclick = async function(){
+  const base = baseUrl(); if(!base) return toast('Enter API URL', 'err');
+  setBusy(this,true);
   try{
-    const url = baseUrl(); if(!url) return alert('Enter API URL first.');
-    HEALTH.textContent='Pinging…'; HEALTH.className='status';
-    const res = await fetch(url+'/health');
-    const ct = (res.headers.get('content-type')||'').toLowerCase();
-    const data = ct.includes('application/json') ? await res.json() : await res.text();
-    if(typeof data === 'object' && data.ok){
-      HEALTH.textContent='OK ✓'; HEALTH.className='status ok';
-    } else {
-      HEALTH.textContent='Unexpected response'; HEALTH.className='status err';
-      alert('Health returned non-JSON or missing ok=true:\n' + (typeof data==='string'?data.slice(0,400):JSON.stringify(data)));
-    }
-  }catch(e){
-    HEALTH.textContent='Error'; HEALTH.className='status err';
-    alert('Health check failed: '+(e?.message||e));
-  }
-};
-
-/* Generate by ID */
-qs('byid').onclick = async function(){
-  try{
-    const base = baseUrl(); if(!base) return alert('Enter API URL first.');
-    const rid = qs('reqid').value.trim(); if(!rid) return alert('Enter a REQ-ID');
-    setBusy(this, true);
-    const data = await post(base + '/generate', { req_id: rid, compliance: selectedCompliance() });
-    SUMMARY.textContent = `Generated ${data.generated} test case(s) for ${data.req_id}`;
-    renderCards(data.test_cases || []); showRaw(data); lastResult = data;
-  }catch(e){ showRaw({error:e?.message||String(e)}); }
+    const r = await fetch(base + '/health');
+    const ct = (r.headers.get('content-type')||'').toLowerCase();
+    const data = ct.includes('application/json') ? await r.json() : await r.text();
+    if(typeof data==='object' && data.ok){
+      HEALTH.textContent = 'OK ✓'; HEALTH.className = 'status ok';
+      toast('API reachable', 'ok');
+    } else { HEALTH.textContent='Unexpected'; HEALTH.className='status err'; toast('Unexpected /health response', 'err'); }
+  }catch(e){ HEALTH.textContent='Error'; HEALTH.className='status err'; toast('Health check failed', 'err'); }
   finally{ setBusy(this,false); }
 };
 
-/* Generate from free text */
-qs('bytext').onclick = async function(){
+// document.getElementById('byid').onclick = async function(){
+//   try{
+//     const base = baseUrl(); if(!base) return toast('Enter API URL', 'err');
+//     const rid = (document.getElementById('reqid').value||'').trim();
+//     if(!rid) return toast('Enter a REQ-ID', 'err');
+//     setBusy(this,true);
+//     const data = await post(base + '/generate', { req_id: rid });
+//     showSummary(`Generated ${data.generated} test case(s) for ${data.req_id}`);
+//     renderCards(data.test_cases||[]); lastResult = data;
+//     toast('Generated', 'ok');
+//   }catch(e){ toast((e?.message||e).slice(0,180), 'err'); }
+//   finally{ setBusy(this,false); }
+// };
+
+document.getElementById('bytext').onclick = async function(){
   try{
-    const base = baseUrl(); if(!base) return alert('Enter API URL first.');
-    const txt = qs('text').value.trim(); if(!txt) return alert('Paste requirement text');
-    setBusy(this, true);
-    const data = await post(base + '/generate', { text: txt, compliance: selectedCompliance() });
-    SUMMARY.textContent = `Generated ${data.generated} test case(s) for ${data.req_id}`;
-    renderCards(data.test_cases || []); showRaw(data); lastResult = data;
-  }catch(e){ showRaw({error:e?.message||String(e)}); }
+    const base = baseUrl(); if(!base) return toast('Enter API URL', 'err');
+    const txt = (document.getElementById('text').value||'').trim();
+    if(!txt) return toast('Paste requirement text', 'err');
+    setBusy(this,true);
+    const data = await post(base + '/generate', { text: txt });
+    showSummary(`Generated ${data.generated} test case(s) for ${data.req_id}`);
+    renderCards(data.test_cases||[]); lastResult = data;
+    toast('Generated', 'ok');
+  }catch(e){ toast((e?.message||e).slice(0,180), 'err'); }
   finally{ setBusy(this,false); }
 };
 
-/* Upload document -> /ingest */
-qs('btnUpload').onclick = async function(){
+document.getElementById('btnUpload').onclick = async function(){
   try{
-    const base = baseUrl(); if(!base) return alert('Enter API URL first.');
-    const f = qs('upFile').files[0]; if(!f) return alert('Choose a file');
+    const base = baseUrl(); if(!base) return toast('Enter API URL', 'err');
+    const f = document.getElementById('upFile').files[0]; if(!f) return toast('Choose a file', 'err');
     const fd = new FormData();
     fd.append('file', f, f.name);
-    const t = qs('upTitle').value.trim(); if(t) fd.append('title', t);
-    const rid = qs('upReqId').value.trim(); if(rid) fd.append('req_id', rid);
-    fd.append('compliance', JSON.stringify(selectedCompliance()));
-    setBusy(this, true);
+    const t = (document.getElementById('upTitle').value||'').trim(); if(t) fd.append('title', t);
+    const rid = (document.getElementById('upReqId').value||'').trim(); if(rid) fd.append('req_id', rid);
+    setBusy(this,true);
     const res = await fetch(base + '/ingest', { method:'POST', body: fd });
     if(!res.ok) throw new Error(await res.text());
     const data = await res.json();
-    SUMMARY.textContent = `Generated ${data.generated} test case(s) for ${data.req_id} (${data.title || 'Uploaded'})`;
-    renderCards(data.test_cases || []); showRaw(data); lastResult = data;
-  }catch(e){ showRaw({error:e?.message||String(e)}); }
+    showSummary(`Generated ${data.generated} test case(s) for ${data.req_id}`);
+    renderCards(data.test_cases||[]); lastResult = data;
+    toast('Uploaded & generated', 'ok');
+  }catch(e){ toast((e?.message||e).slice(0,180), 'err'); }
   finally{ setBusy(this,false); }
 };
 
 /* Downloads */
-qs('btnDownloadJson').onclick = ()=>{
-  if(!lastResult) return alert('Nothing to download yet');
-  downloadBlob(JSON.stringify(lastResult,null,2), `${lastResult.req_id || 'generated'}-testcases.json`, 'application/json');
+document.getElementById('btnDownloadJson').onclick = ()=>{
+  if(!lastResult) return toast('Nothing to download', 'err');
+  download(`${lastResult.req_id||'generated'}-testcases.json`, JSON.stringify(lastResult,null,2), 'application/json');
 };
-qs('btnDownloadCsv').onclick = ()=>{
-  if(!lastResult) return alert('Nothing to download yet');
-  downloadBlob(toCSV(lastResult.test_cases || []), `${lastResult.req_id || 'generated'}-testcases.csv`, 'text/csv');
+document.getElementById('btnDownloadCsv').onclick = ()=>{
+  if(!lastResult) return toast('Nothing to download', 'err');
+  download(`${lastResult.req_id||'generated'}-testcases.csv`, toCSV(lastResult.test_cases||[]), 'text/csv');
 };
 </script>
 </body>
