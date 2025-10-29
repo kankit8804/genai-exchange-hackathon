@@ -3,17 +3,32 @@
 import { useRouter } from "next/navigation";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { auth } from "@/lib/firebase/initFirebase";
+import { useEffect } from "react";
 
 export default function ProfilePage() {
   const [user, loading] = useAuthState(auth);
   const router = useRouter();
 
-  if (!loading && !user) router.replace("/login");
-
   const logout = async () => {
     await auth.signOut();
     router.replace("/login");
   };
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.replace("/login");
+    }
+  }, [loading, user, router]);
+
+    if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen text-slate-600">
+        Loading profile...
+      </div>
+    );
+  }
+
+  if (!user) return null; // prevent flashing while redirecting
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">

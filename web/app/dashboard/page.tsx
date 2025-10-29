@@ -56,10 +56,10 @@ export default function Dashboard() {
     healthCheck().then((ok) => setApiHealthy(ok));
   }, []);
 
-  const handleLogout = async (): Promise<void> => {
-    await auth.signOut();
-    router.push("/login");
-  };
+  // const handleLogout = async (): Promise<void> => {
+  //   await auth.signOut();
+  //   router.push("/login");
+  // };
 
   // POST helper
   const post = async <T,>(url: string, payload?: object): Promise<T> => {
@@ -188,12 +188,6 @@ export default function Dashboard() {
             >
               {apiHealthy ? "Connected ✓" : "Offline ✗"}
             </span>
-            <button
-              onClick={handleLogout}
-              className="rounded-lg border border-white/10 bg-white/10 px-4 py-2 text-sm text-white hover:bg-white/15"
-            >
-              Logout
-            </button>
           </div>
         </div>
       </header>

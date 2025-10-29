@@ -28,11 +28,6 @@ export default function HomePage() {
     }
   }, [loading, user, router]);
 
-  const logout = async () => {
-    await auth.signOut();
-    // no router.replace() here; the effect above will navigate
-  };
-
   const NavLink = ({ href, label }: { href: string; label: string }) => {
     const active = pathname === href;
     return (
@@ -62,44 +57,6 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 text-slate-800">
-      {/* NAVBAR */}
-      <nav className="sticky top-0 z-50 bg-white shadow-sm">
-        <div className="mx-auto max-w-7xl px-4">
-          <div className="flex h-14 items-center gap-3">
-            <Link href="/home" className="flex items-center gap-2">
-              <div className="h-7 w-7 rounded-md bg-emerald-600 text-white grid place-items-center text-sm font-bold">
-                O
-              </div>
-              <span className="font-semibold text-slate-900">Orbit AI</span>
-            </Link>
-
-            <div className="ml-6 hidden md:flex items-center gap-1">
-              <NavLink href="/home" label="Home" />
-              <NavLink href="/dashboard" label="Dashboard" />
-              <NavLink href="/profile" label="Profile" />
-            </div>
-
-            <div className="ml-auto flex items-center gap-3">
-              <span className="hidden sm:block text-sm text-slate-600">
-                Signed in as{" "}
-                <span className="font-medium text-slate-800">{user.email}</span>
-              </span>
-              <Link
-                href="/dashboard"
-                className="rounded-md bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700"
-              >
-                Go to Dashboard
-              </Link>
-              <button
-                onClick={logout}
-                className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
-              >
-                Logout
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
 
       {/* HERO (bright) */}
       <header className="mx-auto max-w-7xl px-4 pt-12 pb-10">
