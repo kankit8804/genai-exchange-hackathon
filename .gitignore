@@ -19,6 +19,7 @@ venv/
 ENV/
 env/
 env.bak/
+.venv311/
 
 # Pip / Poetry
 pip-log.txt
@@ -52,7 +53,11 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
-
+.next/
+web/.next/
+web/node_modules/
+web/out/
+web/build/
 # Next.js build artifacts
 .next/
 out/
