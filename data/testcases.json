@@ -1,6 +1,71 @@
-{"test_id":"TEST-REQ-0001-1","req_id":"REQ-0001","title":"Validate MFA login from new device (Happy Path)","steps":["Precondition: User account exists with MFA (email OTP) enabled and device is unknown.","Navigate to the login page.","Enter valid email and password and submit.","Receive OTP via email and enter it within the allowed time window.","Verify login succeeds and user lands on dashboard.","Open audit view as admin and review latest authentication events."],"expected_result":"Login succeeds only after valid OTP; audit shows authentication success with 2FA from a new device.","preconditions":"User with MFA configured; email delivery working; new device context.","severity":"High","compliance_tags":["IEC62304:SW_VER","ISO13485:DocCtrl","ISO27001:AccessCtrl","GDPR:SecurityByDesign"],"trace_link":"https://demo.trace/REQ-0001#happy","model_version":"poc-manual","prompt_version":"poc-manual-v1","created_at":"2025-09-20T00:00:00Z","created_by":"demo@orbit-ai"}
-{"test_id":"TEST-REQ-0001-2","req_id":"REQ-0001","title":"Account lockout after repeated failed attempts","steps":["Precondition: User account exists; device is new/unknown.","Attempt login with invalid password 5 times within 10 minutes.","On the 6th attempt use the correct password.","Observe lockout messaging and inability to login.","As admin, review audit/logs for lockout event."],"expected_result":"Account is locked after 5 failed attempts within 10 minutes; subsequent valid credentials do not allow login until lockout window expires or admin unlocks; audit contains lockout event.","preconditions":"Lockout threshold configured to 5/10min; audit logging enabled.","severity":"Critical","compliance_tags":["IEC62304:SW_VER","ISO27001:AccessCtrl","ISO27001:AuditLogging","GDPR:AccountSecurity"],"trace_link":"https://demo.trace/REQ-0001#lockout","model_version":"poc-manual","prompt_version":"poc-manual-v1","created_at":"2025-09-20T00:00:00Z","created_by":"demo@orbit-ai"}
-{"test_id":"TEST-REQ-0001-3","req_id":"REQ-0001","title":"Invalid/expired OTP should block login and record audit","steps":["Precondition: User account exists; device is new/unknown.","Login with valid email and password.","Enter an invalid or expired OTP.","Observe error message and remain on 2FA screen.","Review audit/log for failed second-factor verification."],"expected_result":"Login remains blocked with clear error; no session established; audit shows failed 2FA attempt.","preconditions":"MFA configured; OTP TTL set (e.g., 5 minutes).","severity":"Medium","compliance_tags":["IEC62304:SW_VER","ISO27001:Authn","ISO27001:AuditLogging"],"trace_link":"https://demo.trace/REQ-0001#otp-invalid","model_version":"poc-manual","prompt_version":"poc-manual-v1","created_at":"2025-09-20T00:00:00Z","created_by":"demo@orbit-ai"}
-{"test_id":"TEST-REQ-0002-1","req_id":"REQ-0002","title":"Update allergy with contraindication flagging (Happy Path)","steps":["Precondition: Patient record exists; clinician user logged in.","Open Allergies section and click 'Add/Update'.","Enter allergy 'Penicillin' with reaction 'Rash'.","Save the change.","System evaluates medication contraindications for current meds.","Observe a warning flag if a known contraindication exists.","Verify the change is versioned and attributed to the clinician."],"expected_result":"Allergy update is saved; contraindications are flagged; version history shows the new entry with user attribution.","preconditions":"Clinical rules engine active; versioning enabled.","severity":"High","compliance_tags":["IEC62304:SW_VER","ISO13485:DocCtrl","ISO27001:Integrity","FDA:Traceability"],"trace_link":"https://demo.trace/REQ-0002#happy","model_version":"poc-manual","prompt_version":"poc-manual-v1","created_at":"2025-09-20T00:00:00Z","created_by":"demo@orbit-ai"}
-{"test_id":"TEST-REQ-0002-2","req_id":"REQ-0002","title":"Block save when contraindication warning is ignored without acknowledgement","steps":["Precondition: Patient has an active medication contraindicated by the allergy being added; clinician logged in.","Start adding the conflicting allergy.","System displays a contraindication warning prior to save.","Attempt to save without acknowledging or providing reason.","Observe system behavior and logs."],"expected_result":"System blocks save (or requires explicit acknowledgement with reason) per policy; no partial/unsafe data is persisted; audit records the attempt.","preconditions":"Policy set to require acknowledgement for contraindications; audit enabled.","severity":"Critical","compliance_tags":["IEC62304:RiskCtrl","ISO14971:Risk","ISO13485:DocCtrl","ISO27001:Integrity"],"trace_link":"https://demo.trace/REQ-0002#ack-required","model_version":"poc-manual","prompt_version":"poc-manual-v1","created_at":"2025-09-20T00:00:00Z","created_by":"demo@orbit-ai"}
-{"test_id":"TEST-REQ-0002-3","req_id":"REQ-0002","title":"Verify version history and user attribution on allergy edit","steps":["Precondition: At least one prior allergy entry exists.","Edit an existing allergy (e.g., change reaction from 'Rash' to 'Hives').","Save the edit.","Open version history for the allergy record.","Verify previous and current versions with timestamps and user attribution.","Confirm that rollback is possible if supported."],"expected_result":"Version history shows old vs new values, timestamps, and modifying user; optional rollback works; audit trail is complete.","preconditions":"Versioning and audit features enabled for allergy entity.","severity":"Medium","compliance_tags":["ISO13485:DocCtrl","FDA:RecordKeeping","ISO27001:AuditLogging"],"trace_link":"https://demo.trace/REQ-0002#versioning","model_version":"poc-manual","prompt_version":"poc-manual-v1","created_at":"2025-09-20T00:00:00Z","created_by":"demo@orbit-ai"}
+[
+  {
+    "test_id": "TEST-92CFF546",
+    "req_id": "REQ-0004",
+    "title": "Verify: Inventory Role Access",
+    "steps": [
+      "Step 1: Setup",
+      "Step 2: Execute",
+      "Step 3: Validate"
+    ],
+    "expected_result": "Expected system to behave per requirement.",
+    "preconditions": "",
+    "severity": "High",
+    "compliance_tags": [
+      "IEC62304:SW_VER",
+      "ISO13485:DocCtrl",
+      "ISO27001:AccessCtrl"
+    ],
+    "trace_link": "http://localhost:3000/traceability/REQ-0004",
+    "model_version": "gemini-2.0-flash-001",
+    "prompt_version": "poc-v1",
+    "created_at": "2025-10-30T05:38:04.570162Z",
+    "created_by": "demo@orbit-ai"
+  },
+  {
+    "test_id": "TEST-41CED0B4",
+    "req_id": "REQ-0005",
+    "title": "Verify: Inventory Stock Alerts",
+    "steps": [
+      "Step 1: Setup",
+      "Step 2: Execute",
+      "Step 3: Validate"
+    ],
+    "expected_result": "Expected system to behave per requirement.",
+    "preconditions": "",
+    "severity": "High",
+    "compliance_tags": [
+      "IEC62304:SW_VER",
+      "ISO13485:DocCtrl",
+      "ISO27001:AccessCtrl"
+    ],
+    "trace_link": "http://localhost:3000/traceability/REQ-0005",
+    "model_version": "gemini-2.0-flash-001",
+    "prompt_version": "poc-v1",
+    "created_at": "2025-10-30T05:38:04.571018Z",
+    "created_by": "demo@orbit-ai"
+  },
+  {
+    "test_id": "TEST-03C3592B",
+    "req_id": "REQ-0006",
+    "title": "Verify: Expired Items Handling",
+    "steps": [
+      "Step 1: Setup",
+      "Step 2: Execute",
+      "Step 3: Validate"
+    ],
+    "expected_result": "Expected system to behave per requirement.",
+    "preconditions": "",
+    "severity": "High",
+    "compliance_tags": [
+      "IEC62304:SW_VER",
+      "ISO13485:DocCtrl",
+      "ISO27001:AccessCtrl"
+    ],
+    "trace_link": "http://localhost:3000/traceability/REQ-0006",
+    "model_version": "gemini-2.0-flash-001",
+    "prompt_version": "poc-v1",
+    "created_at": "2025-10-30T05:38:04.571507Z",
+    "created_by": "demo@orbit-ai"
+  }
+]

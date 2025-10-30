@@ -1,5 +1,6 @@
 "use client";
 import { TestCase } from "@/utils/types";
+import Link from "next/link";
 
 interface Props {
   testCases: TestCase[];
@@ -12,6 +13,16 @@ export default function ResultCards({ testCases }: Props) {
     <div>
       {testCases.map((tc) => (
         <div key={tc.test_id} className="tc">
+          {(() => {
+            console.log("TRACE DEBUG:", {
+              title: tc.title,
+              test_id: tc.test_id,
+              req_id: tc.req_id,
+              trace_link: tc.trace_link,
+            });
+            return null;
+          })()}
+
           <div className="row">
             <div style={{ flex: 1 }}>
               <h4>{tc.title || "(no title)"}</h4>
@@ -21,14 +32,17 @@ export default function ResultCards({ testCases }: Props) {
               </div>
             </div>
             <div className="act">
-              <a
-                className="btn ghost"
-                href={tc.trace_link || "#"}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Trace Link
-              </a>
+              {tc.req_id ? (
+                <Link
+                  href={`/traceability/${tc.req_id}`}
+                  className="btn ghost"
+                  prefetch={false}
+                >
+                  Trace Link to below
+                </Link>
+              ) : (
+                <span className="btn ghost disabled">No Trace</span>
+              )}
             </div>
           </div>
           <div className="sep" />
@@ -36,7 +50,7 @@ export default function ResultCards({ testCases }: Props) {
             <b>Steps</b>
           </div>
           <ol className="list">
-            {(tc.steps ||[]).map((s, idx) => (
+            {(tc.steps || []).map((s, idx) => (
               <li key={idx}>{s}</li>
             ))}
           </ol>

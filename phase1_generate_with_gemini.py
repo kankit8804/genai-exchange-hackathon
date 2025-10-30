@@ -96,8 +96,9 @@ def validate_and_normalize_payload(req_id: str, raw_json: str):
         if isinstance(tags, str):
             tags = [tags]
         tags = [str(t) for t in tags]
+        FRONTEND_BASE_URL = getenv("FRONTEND_BASE_URL", "http://localhost:3000")
+        trace_link = tc.get("trace_link") or f"{FRONTEND_BASE_URL}/traceability/{req_id}"
 
-        trace_link = tc.get("trace_link") or f"https://demo.trace/{req_id}"
 
         # If model returned an id, keep it; else generate
         test_id = tc.get("test_id") or make_test_id()

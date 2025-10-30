@@ -474,7 +474,12 @@ function ResultItem({
             {pushing ? "Pushing…" : "Push to Jira"}
           </button>
           {jira && (
-            <a href={jira} target="_blank" rel="noreferrer" className="text-xs text-emerald-700 hover:underline">
+            <a
+              href={jira}
+              target="_blank"
+              rel="noreferrer"
+              className="text-xs text-emerald-700 hover:underline"
+            >
               View ↗
             </a>
           )}
@@ -492,15 +497,24 @@ function ResultItem({
           <div className="my-3 h-px bg-slate-200" />
           <div className="text-xs text-slate-700">
             <div className="mb-1 font-semibold text-slate-800">Steps</div>
-            <ol className="list-decimal pl-5 space-y-1">{tc.steps.map((s, i) => <li key={i}>{s}</li>)}</ol>
+            <ol className="list-decimal pl-5 space-y-1">
+              {tc.steps.map((s, i) => (
+                <li key={i}>{s}</li>
+              ))}
+            </ol>
           </div>
           <div className="mt-3 text-xs">
             <div className="mb-1 font-semibold text-slate-800">Expected</div>
             <div className="text-slate-700">{tc.expected_result}</div>
           </div>
-          {tc.trace_link && (
+          {tc.req_id && (
             <div className="mt-3">
-              <a className="text-xs text-emerald-700 hover:underline" href={tc.trace_link} target="_blank" rel="noreferrer">
+              <a
+                className="text-xs text-emerald-700 hover:underline"
+                href={`/traceability/${tc.req_id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
                 Traceability Link ↗
               </a>
             </div>
