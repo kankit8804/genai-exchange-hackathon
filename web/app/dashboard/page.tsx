@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { auth } from "@/lib/firebase/initFirebase";
 import { useAuthState } from "react-firebase-hooks/auth";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { healthCheck } from "@/utils/api";
 
 /* ========= Types ========= */
@@ -48,6 +48,13 @@ export default function Dashboard() {
 
   const API_BASE = "https://orbit-api-938180057345.us-central1.run.app";
 
+  const searchParams = useSearchParams();
+  const projectName = searchParams.get("projectName");
+  const description = searchParams.get("description");
+  const projectId = searchParams.get("projectId");
+
+  console.log(`Project Name:${projectName}, Description${description}, ProjecctId${projectId}`);
+
   useEffect(() => {
     if (!loading && !user) router.push("/login");
   }, [user, loading, router]);
@@ -55,11 +62,6 @@ export default function Dashboard() {
   useEffect(() => {
     healthCheck().then((ok) => setApiHealthy(ok));
   }, []);
-
-  // const handleLogout = async (): Promise<void> => {
-  //   await auth.signOut();
-  //   router.push("/login");
-  // };
 
   // POST helper
   const post = async <T,>(url: string, payload?: object): Promise<T> => {
@@ -170,11 +172,13 @@ export default function Dashboard() {
           {/* Left: title */}
           <div className="leading-tight">
             <h1 className="text-xl font-semibold text-white">
-              Orbit AI — Test Case Generator
+              {/* Orbit AI — Test Case Generator */}
+              {projectName}
             </h1>
             <p className="text-sm text-slate-300">
-              Generate test cases from requirements, upload docs, and push to Jira.
+              {description}
             </p>
+
           </div>
 
           {/* Right: status + logout */}
