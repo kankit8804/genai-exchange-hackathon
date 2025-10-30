@@ -5,7 +5,7 @@ from typing import List, Optional
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-
+import traceability
 import requests
 
 # Vertex AI / BigQuery
@@ -111,6 +111,7 @@ def call_model(prompt: str) -> str:
 
 def save_testcases(req_id: str, tcs: List[dict]) -> List[dict]:
     rows = []
+    BASE_URL = "http://localhost:3000"
     for tc in tcs:
         rows.append({
             "test_id": tc.get("test_id") or "TEST-" + uuid.uuid4().hex[:8].upper(),
@@ -123,7 +124,7 @@ def save_testcases(req_id: str, tcs: List[dict]) -> List[dict]:
             "compliance_tags": tc.get("compliance_tags") or [
                 "IEC62304:SW_VER","ISO13485:DocCtrl","ISO27001:AccessCtrl"
             ],
-            "trace_link": tc.get("trace_link") or f"https://demo.trace/{req_id}",
+            "trace_link" : tc.get("trace_link") or f"{BASE_URL}/traceability/{req_id}",
             "model_version": MODEL_NAME,
             "prompt_version": PROMPT_VER,
             "created_at": now_ts(),
@@ -249,6 +250,7 @@ def build_adf_description(summary: str, steps: Optional[List[str]] = None, expec
 
 
 # -------------------- Routes --------------------
+app.include_router(traceability.router)
 @app.get("/health")
 def health():
     return {
