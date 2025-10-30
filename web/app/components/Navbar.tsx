@@ -33,7 +33,7 @@ export default function Navbar() {
               <Link href="/home" className="flex items-center gap-2 text-slate-700 hover:text-emerald-600 text-sm font-medium">
                 <Home size={16} /> Home
               </Link>
-              <Link href="/dashboard" className="flex items-center gap-2 text-slate-700 hover:text-emerald-600 text-sm font-medium">
+              <Link href="/project" className="flex items-center gap-2 text-slate-700 hover:text-emerald-600 text-sm font-medium">
                 <Folder size={16} /> Project
               </Link>
             </div>
