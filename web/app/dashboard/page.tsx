@@ -75,21 +75,26 @@ export default function Dashboard() {
     return (await res.json()) as T;
   };
 
-  // Generate from text
-  const handleGenerateText = async (): Promise<void> => {
-    const text = freeText.trim();
-    if (!text) return alert("Paste requirement text");
-    try {
-      setLoadingTextGen(true);
-      const data = await post<GenerateResponse>(`${API_BASE}/generate`, { text });
-      setSummary(`Generated ${data.generated} test case(s) for ${data.req_id}`);
-      setTestCases(data.test_cases);
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "Error generating test cases");
-    } finally {
-      setLoadingTextGen(false);
-    }
-  };
+// Generate from text
+const handleGenerateText = async (): Promise<void> => {
+  const text = freeText.trim();
+  if (!text) return alert("Paste requirement text");
+
+  try {
+    setLoadingTextGen(true);
+    const body: Record<string, any> = { text };
+    if (projectId) body.project_id = projectId;
+    console.log(projectId);
+    console.log(body);
+    const data = await post<GenerateResponse>(`${API_BASE}/generate`, body);
+    setSummary(`Generated ${data.generated} test case(s) for ${data.req_id}`);
+    setTestCases(data.test_cases);
+  } catch (err) {
+    alert(err instanceof Error ? err.message : "Error generating test cases");
+  } finally {
+    setLoadingTextGen(false);
+  }
+};
 
   // Upload + generate
   const handleUploadFile = async (): Promise<void> => {
@@ -99,8 +104,10 @@ export default function Dashboard() {
     fd.append("file", file, file.name);
     if (title.trim()) fd.append("title", title.trim());
     if (reqId.trim()) fd.append("req_id", reqId.trim());
+    if (projectId) fd.append("project_id", projectId);
 
     try {
+      console.log(projectId);
       setLoadingUploadGen(true);
       const res = await fetch(`${API_BASE}/ingest`, { method: "POST", body: fd });
       if (!res.ok) throw new Error(await res.text());
