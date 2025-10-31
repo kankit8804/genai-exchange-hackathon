@@ -37,24 +37,80 @@ export default function Dashboard() {
   const [freeText, setFreeText] = useState("");
   const [title, setTitle] = useState("");
   const [reqId, setReqId] = useState("");
-  const [file, setFile] = useState<File | null>(null);
+  // const [file, setFile] = useState<File | null>(null);
 
   const [testCases, setTestCases] = useState<TestCase[]>([]);
   const [summary, setSummary] = useState("No results yet.");
 
   // Separate loading states
-  const [loadingTextGen, setLoadingTextGen] = useState(false);
-  const [loadingUploadGen, setLoadingUploadGen] = useState(false);
+  // const [loadingTextGen, setLoadingTextGen] = useState(false);
+  // const [loadingUploadGen, setLoadingUploadGen] = useState(false);
 
   const API_BASE = "https://orbit-api-938180057345.us-central1.run.app";
 
   const searchParams = useSearchParams();
   const projectName = searchParams.get("projectName");
-  const description = searchParams.get("description");
+  const pDescription = searchParams.get("description");
   const projectId = searchParams.get("projectId");
 
-  console.log(`Project Name:${projectName}, Description${description}, ProjecctId${projectId}`);
+  console.log(`Project Name:${projectName}, Description${pDescription}, ProjecctId${projectId}`);
 
+  // Unified testcase Generation
+  const [files, setFiles] = useState<FileList | null>(null);
+  const [links, setLinks] = useState<string[]>([]);
+  const [newLink, setNewLink] = useState("");
+  const [description, setDescription] = useState("");
+  const [loadingGen, setLoading] = useState(false);
+
+  const addLink = () => {
+    if (newLink.trim() === "") return;
+    setLinks([...links, newLink.trim()]);
+    setNewLink("");
+  };
+
+  const handleGenerate = async () => {
+    if (!files?.length && !links.length && !description.trim()) {
+      alert("Please provide at least one input (file, link, or text).");
+      return;
+    }
+
+    const formData = new FormData();
+
+    if (files?.length) {
+      Array.from(files).forEach((file) => formData.append("files", file));
+    }
+
+    if (links.length) {
+      formData.append("links", JSON.stringify(links));
+    }
+
+    if (description.trim()) {
+      formData.append("description", description.trim());
+    }
+
+    try {
+      setLoading(true);
+      const res = await fetch(`${API_BASE}/generate_unified`, {
+        method: "POST",
+        body: formData,
+      });
+
+      console.log("Response status:", res.status);
+
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+
+      setSummary(data.summary ?? "Generated successfully!");
+      setTestCases(data.test_cases ?? []);
+    } catch (err) {
+      console.error("Error generating:", err);
+      alert("Error generating test cases.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Redirect if not logged in
   useEffect(() => {
     if (!loading && !user) router.push("/login");
   }, [user, loading, router]);
@@ -75,43 +131,43 @@ export default function Dashboard() {
   };
 
   // Generate from text
-  const handleGenerateText = async (): Promise<void> => {
-    const text = freeText.trim();
-    if (!text) return alert("Paste requirement text");
-    try {
-      setLoadingTextGen(true);
-      const data = await post<GenerateResponse>(`${API_BASE}/generate`, { text });
-      setSummary(`Generated ${data.generated} test case(s) for ${data.req_id}`);
-      setTestCases(data.test_cases);
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "Error generating test cases");
-    } finally {
-      setLoadingTextGen(false);
-    }
-  };
+  // const handleGenerateText = async (): Promise<void> => {
+  //   const text = freeText.trim();
+  //   if (!text) return alert("Paste requirement text");
+  //   try {
+  //     setLoadingTextGen(true);
+  //     const data = await post<GenerateResponse>(`${API_BASE}/generate`, { text });
+  //     setSummary(`Generated ${data.generated} test case(s) for ${data.req_id}`);
+  //     setTestCases(data.test_cases);
+  //   } catch (err) {
+  //     alert(err instanceof Error ? err.message : "Error generating test cases");
+  //   } finally {
+  //     setLoadingTextGen(false);
+  //   }
+  // };
 
   // Upload + generate
-  const handleUploadFile = async (): Promise<void> => {
-    if (!file) return alert("Choose a file");
+  // const handleUploadFile = async (): Promise<void> => {
+  //   if (!file) return alert("Choose a file");
 
-    const fd = new FormData();
-    fd.append("file", file, file.name);
-    if (title.trim()) fd.append("title", title.trim());
-    if (reqId.trim()) fd.append("req_id", reqId.trim());
+  //   const fd = new FormData();
+  //   fd.append("file", file, file.name);
+  //   if (title.trim()) fd.append("title", title.trim());
+  //   if (reqId.trim()) fd.append("req_id", reqId.trim());
 
-    try {
-      setLoadingUploadGen(true);
-      const res = await fetch(`${API_BASE}/ingest`, { method: "POST", body: fd });
-      if (!res.ok) throw new Error(await res.text());
-      const data: IngestResponse = await res.json();
-      setSummary(`Generated ${data.generated} test case(s) for ${data.req_id}`);
-      setTestCases(data.test_cases);
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "Error uploading file");
-    } finally {
-      setLoadingUploadGen(false);
-    }
-  };
+  //   try {
+  //     setLoadingUploadGen(true);
+  //     const res = await fetch(`${API_BASE}/ingest`, { method: "POST", body: fd });
+  //     if (!res.ok) throw new Error(await res.text());
+  //     const data: IngestResponse = await res.json();
+  //     setSummary(`Generated ${data.generated} test case(s) for ${data.req_id}`);
+  //     setTestCases(data.test_cases);
+  //   } catch (err) {
+  //     alert(err instanceof Error ? err.message : "Error uploading file");
+  //   } finally {
+  //     setLoadingUploadGen(false);
+  //   }
+  // };
 
   // Downloads
   const downloadJSON = (): void => {
@@ -176,7 +232,7 @@ export default function Dashboard() {
               {projectName}
             </h1>
             <p className="text-sm text-slate-300">
-              {description}
+              {pDescription}
             </p>
 
           </div>
@@ -199,7 +255,87 @@ export default function Dashboard() {
       {/* Content */}
       <main className="mx-auto max-w-7xl px-4 py-10 grid gap-6 lg:grid-cols-3">
         {/* Left column */}
-        <section className="space-y-6 lg:col-span-2">
+        <section className="space-y-6 lg:col-span-2 relative min-h-[300px]">
+          <Card>
+            <CardHeader
+              title="Upload Requirement Document"
+              subtitle="PDF, DOCX, TXT or Markdown. Optionally add a title or REQ-ID."
+            />
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Optional title"
+              />
+              <Input
+                value={reqId}
+                onChange={(e) => setReqId(e.target.value)}
+                placeholder="REQ-ID (optional)"
+              />
+            </div>
+            
+            {/*Upload File Section*/}
+            <input
+              id="files"
+              type="file"
+              accept=".pdf,.docx,.txt,.md"
+              multiple
+              className="hidden"
+              onChange={(e) => setFiles(e.target.files)}
+            />
+                <label
+                  htmlFor="files"
+                  className="mt-3 flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm hover:bg-slate-50"
+                >
+              <span className="truncate">
+                {files?.length
+                  ? `${files.length} file(s) selected`
+                  : "Choose File(s)"}
+              </span>
+              <span className="rounded-lg bg-emerald-600 px-3 px-3 py-1 text-xs text-white hover:bg-emerald-700">Browse</span>
+            </label>
+
+            <p className="text-xs text-slate-500">PDF, DOCX, TXT, Markdown supported.</p>
+          </Card>
+
+          {/* Attach Link Section*/}
+          <Card>
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Reference Links
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="url"
+                  placeholder="Paste a link (e.g. Jira, Drive, Notion)"
+                  value={newLink}
+                  onChange={(e) => setNewLink(e.target.value)}
+                  className="flex-1 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-emerald-300"
+                />
+                <button
+                  type="button"
+                  onClick={addLink}
+                  className="rounded-md bg-emerald-600 px-3 py-2 text-sm text-white hover:bg-emerald-700"
+                >
+                  Add
+                </button>
+              </div>
+              {links.length > 0 && (
+                <ul className="mt-2 space-y-1 text-sm text-emerald-700">
+                  {links.map((l, i) => (
+                    <li key={i}>
+                      <a href={l} target="_blank" rel="noreferrer" className="hover:underline">
+                        {l}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </Card>
+          
+          {/* Free Text Generate*/}
           <Card>
             <CardHeader
               title="Generate from Free Text"
@@ -211,62 +347,17 @@ export default function Dashboard() {
                 onChange={(e) => setFreeText(e.target.value)}
                 placeholder="Paste a requirement (no PHI)"
               />
-              <PrimaryButton
-                onClick={handleGenerateText}
-                loading={loadingTextGen}
-                label="Analyze & Generate"
-                loadingLabel="Generating…"
-              />
             </div>
           </Card>
 
-          <Card>
-            <CardHeader
-              title="Upload Requirement Document"
-              subtitle="PDF, DOCX, TXT or Markdown. Optionally add a title or REQ-ID."
+          <div className="bottom-3 right-4">
+            <PrimaryButton
+             onClick={handleGenerate}
+              loading={loading}
+              label="Generate Test Cases"
+              loadingLabel="Generating..."
             />
-            <div className="mt-4 space-y-4">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Input
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Optional title"
-                />
-                <Input
-                  value={reqId}
-                  onChange={(e) => setReqId(e.target.value)}
-                  placeholder="REQ-ID (optional)"
-                />
-              </div>
-
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <label
-                  htmlFor="file"
-                  className="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm hover:bg-slate-50"
-                >
-                  <span className="truncate">
-                    {file ? file.name : "Choose File"}
-                  </span>
-                  <span className="rounded-md bg-slate-100 px-3 py-1 text-xs">Browse</span>
-                </label>
-                <input
-                  id="file"
-                  type="file"
-                  accept=".pdf,.docx,.txt,.md"
-                  className="hidden"
-                  onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-                />
-                <PrimaryButton
-                  onClick={handleUploadFile}
-                  loading={loadingUploadGen}
-                  label="Analyze & Generate"
-                  loadingLabel="Uploading…"
-                />
-              </div>
-
-              <p className="text-xs text-slate-500">PDF, DOCX, TXT, Markdown supported.</p>
-            </div>
-          </Card>
+          </div>
         </section>
 
         {/* Right column (compact until results; grows when they exist) */}
@@ -304,7 +395,7 @@ export default function Dashboard() {
         </aside>
       </main>
 
-      <footer className="py-8 text-center text-xs text-slate-500">© Orbit AI — PoC</footer>
+      <footer className="py-8 text-center text-xs text-slate-500">© Orbit AI</footer>
     </div>
   );
 }

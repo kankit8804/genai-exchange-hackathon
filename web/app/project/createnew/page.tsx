@@ -20,7 +20,7 @@ export default function NewProjectPage() {
 
     setLoading(true);
     try {
-      await addDoc(collection(db, "projects"), {
+      const docRef = await addDoc(collection(db, "projects"), {
         uid: user.uid,
         projectName: projectName,
         jiraProjectId:jiraProject,
@@ -28,7 +28,9 @@ export default function NewProjectPage() {
         createdAt: Timestamp.now(),
       });
 
-      router.push(`/dashboard?projectName=${encodeURIComponent(projectName)}&description=${encodeURIComponent(description)}`); // redirect to main project dashboard
+      const newProjectId = docRef.id;
+
+      router.push(`/dashboard?projectName=${encodeURIComponent(projectName)}&description=${encodeURIComponent(description)}&projectid=${newProjectId}`); // redirect to main project dashboard
     } catch (error) {
       console.error("Error creating project:", error);
       alert("Something went wrong!");
