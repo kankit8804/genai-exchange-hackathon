@@ -264,6 +264,103 @@ def health():
         "jira": bool(JIRA_BASE and JIRA_USER and JIRA_API_TOKEN and JIRA_PROJECT_KEY),
     }
 
+@app.post("/generate_unified")
+async def generate_unified(
+    text: Optional[str] = Form(None),
+    file: Optional[UploadFile] = File(None),
+    link: Optional[str] = Form(None),
+    req_id: Optional[str] = Form(None),
+    title: Optional[str] = Form(None),
+    compliance: Optional[str] = Form(None)
+):
+    """
+    Unified endpoint for all input types:
+    - Text (manual)
+    - File upload (PDF/DOCX/TXT)
+    - Existing req_id
+    - Link / URL
+    """
+    extracted_text = ""
+    source_type = "manual"
+    
+    if file is not None:
+        content = await file.read()
+        extracted_text = sniff_extract_text(file.filename, content)
+        title = title or file.filename
+        source_type = "upload"
+
+    elif text:
+        extracted_text = text.strip()
+        source_type = "text"
+
+    elif link:
+        try:
+            resp = requests.get(link, timeout=10)
+            resp.raise_for_status()
+            raw = resp.text
+            cleaned = re.sub(r"<[^>]+>", "", raw)
+            extracted_text = cleaned.strip()
+            title = title or link
+            source_type = "link"
+        except Exception as e:
+            raise HTTPException(400, f"Failed to fetch or read link: {e}")
+
+    elif req_id:
+        job = get_bq().query(
+            f"SELECT text, title FROM `{TABLE_REQ}` WHERE req_id=@rid",
+            job_config=bigquery.QueryJobConfig(
+                query_parameters=[bigquery.ScalarQueryParameter("rid", "STRING", req_id)]
+            ),
+        )
+        row = next(iter(job.result()), None)
+        if not row:
+            raise HTTPException(404, f"Requirement {req_id} not found")
+        extracted_text = (row["text"] or "").strip()
+        title = title or row.get("title") or "(Uploaded)"
+        source_type = "existing"
+
+    else:
+        raise HTTPException(400, "Please provide either 'text', 'file', 'link', or a valid 'req_id'.")
+
+    if not extracted_text.strip():
+        raise HTTPException(400, "No text extracted or provided.")
+
+    comp_list = None
+    if compliance:
+        try:
+            comp_list = json.loads(compliance)
+        except Exception:
+            comp_list = None
+
+    rid = (req_id or f"REQ-{uuid.uuid4().hex[:6].upper()}").strip()
+
+    upsert_requirement(rid, title or "(Uploaded)", extracted_text)
+
+    prompt = fill_prompt(load_prompt(), rid, extracted_text, comp_list)
+
+    out = call_model(prompt)
+    try:
+        payload = json.loads(extract_json(out))
+    except json.JSONDecodeError as e:
+        raise HTTPException(500, f"Model output invalid JSON: {e}")
+
+    tcs = payload.get("test_cases", [])
+    if not isinstance(tcs, list) or not tcs:
+        raise HTTPException(500, "Model returned no test_cases")
+
+    saved = save_testcases(rid, tcs)
+
+    return {
+        "ok": True,
+        "req_id": rid,
+        "title": title or "(Uploaded)",
+        "source_type": source_type,
+        "generated": len(saved),
+        "test_cases": saved
+    }
+
+
+
 @app.post("/generate")
 def generate(body: GenerateBody):
     rid = (body.req_id or f"REQ-{uuid.uuid4().hex[:6].upper()}").strip()
