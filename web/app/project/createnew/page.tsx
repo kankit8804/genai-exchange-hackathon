@@ -28,7 +28,7 @@ export default function NewProjectPage() {
         createdAt: Timestamp.now(),
       });
 
-      router.push(`/dashboard?name=${encodeURIComponent(projectName)}&description=${encodeURIComponent(description)}`); // redirect to main project dashboard
+      router.push(`/dashboard?projectName=${encodeURIComponent(projectName)}&description=${encodeURIComponent(description)}`); // redirect to main project dashboard
     } catch (error) {
       console.error("Error creating project:", error);
       alert("Something went wrong!");
