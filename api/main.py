@@ -109,7 +109,7 @@ def call_model(prompt: str) -> str:
     parts = resp.candidates[0].content.parts if resp.candidates else []
     return "".join(getattr(p, "text", "") for p in parts)
 
-def save_testcases(req_id: str, tcs: List[dict]) -> List[dict]:
+def save_testcases(req_id: str, tcs: List[dict], project_id: Optional[str] = None) -> List[dict]:
     rows = []
     BASE_URL = "http://localhost:3000"
     for tc in tcs:
@@ -129,6 +129,7 @@ def save_testcases(req_id: str, tcs: List[dict]) -> List[dict]:
             "prompt_version": PROMPT_VER,
             "created_at": now_ts(),
             "created_by": CREATED_BY,
+            "project_id": project_id or tc.get("project_id") or PROJECT_ID,
         })
     errs = get_bq().insert_rows_json(TABLE_TC, rows)
     if errs:
@@ -184,6 +185,8 @@ class GenerateBody(BaseModel):
     req_id: Optional[str] = None
     text: Optional[str] = None
     compliance: Optional[List[str]] = None
+    project_id: Optional[str] = None
+
 
 class PushBody(BaseModel):
     req_id: str
@@ -381,6 +384,8 @@ def generate(body: GenerateBody):
     if not text:
         raise HTTPException(400, "Provide either 'text' or a valid 'req_id'.")
 
+    upsert_requirement(rid, f"Generated Requirement {rid}", text, project_id=body.project_id)
+
     prompt = fill_prompt(load_prompt(), rid, text, body.compliance)
     out = call_model(prompt)
 
@@ -393,7 +398,7 @@ def generate(body: GenerateBody):
     if not isinstance(tcs, list) or not tcs:
         raise HTTPException(500, "Model returned no test_cases")
 
-    saved = save_testcases(rid, tcs)
+    saved = save_testcases(rid, tcs, project_id=body.project_id)
     return {"req_id": rid, "generated": len(saved), "test_cases": saved}
 
 @app.post("/generate/{req_id}")
@@ -405,7 +410,8 @@ async def ingest_requirement(
     file: UploadFile = File(...),
     title: Optional[str] = Form(None),
     req_id: Optional[str] = Form(None),
-    compliance: Optional[str] = Form(None)
+    compliance: Optional[str] = Form(None),
+    project_id: Optional[str] = Form(None), 
 ):
     content = await file.read()
     text = sniff_extract_text(file.filename, content)
@@ -413,7 +419,7 @@ async def ingest_requirement(
         raise HTTPException(400, "No text extracted from file.")
 
     rid = (req_id or f"REQ-{uuid.uuid4().hex[:6].upper()}").strip()
-    upsert_requirement(rid, title or file.filename, text)
+    upsert_requirement(rid, title or file.filename, text, project_id=project_id)
 
     comp_list = None
     if compliance:
@@ -434,7 +440,7 @@ async def ingest_requirement(
     if not isinstance(tcs, list) or not tcs:
         raise HTTPException(500, "Model returned no test_cases")
 
-    saved = save_testcases(rid, tcs)
+    saved = save_testcases(rid, tcs, project_id=project_id)
     return {"req_id": rid, "generated": len(saved), "test_cases": saved, "title": title or file.filename}
 
 @app.post("/push/jira")

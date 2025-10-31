@@ -23,14 +23,14 @@ export default function NewProjectPage() {
       const docRef = await addDoc(collection(db, "projects"), {
         uid: user.uid,
         projectName: projectName,
-        jiraProjectId:jiraProject,
+        jiraProjectId: jiraProject,
         description,
         createdAt: Timestamp.now(),
       });
 
       const newProjectId = docRef.id;
 
-      router.push(`/dashboard?projectName=${encodeURIComponent(projectName)}&description=${encodeURIComponent(description)}&projectid=${newProjectId}`); // redirect to main project dashboard
+      router.push(`/dashboard?projectName=${encodeURIComponent(projectName)}&description=${encodeURIComponent(description)}&projectid=${newProjectId}`);
     } catch (error) {
       console.error("Error creating project:", error);
       alert("Something went wrong!");
@@ -56,7 +56,7 @@ export default function NewProjectPage() {
               value={projectName}
               onChange={(e) => setProjectName(e.target.value)}
               required
-              className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
 
@@ -69,7 +69,7 @@ export default function NewProjectPage() {
               value={jiraProject}
               onChange={(e) => setJiraProject(e.target.value)}
               required
-              className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
 
@@ -81,7 +81,7 @@ export default function NewProjectPage() {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={4}
-              className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
 
