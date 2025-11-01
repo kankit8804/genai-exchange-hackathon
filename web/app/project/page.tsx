@@ -53,7 +53,7 @@ useEffect(() => {
           jiraProject: project.jiraProject,
           createdAt: project.createdAt
             ? new Date(project.createdAt.seconds * 1000).toLocaleString()
-            : "N/A", // ✅ convert to human-readable string
+            : "N/A", 
         };
       });
 

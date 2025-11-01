@@ -10,6 +10,7 @@ export interface TestCase {
   expected_result: string;
   steps: string[];
   isPushed?: boolean;
+  isRemoved?: boolean;
   project_id: string;
 }
 
