@@ -4,6 +4,7 @@ import { useState } from "react";
 import { SeverityBadge } from "./SeverityBadge";
 import { auth, db } from "@/lib/firebase/initFirebase";
 import { doc, getDoc } from "firebase/firestore";
+import { pushToAzure } from "@/lib/utils/alm";
 
 interface TestCase {
   req_id: string;
@@ -27,9 +28,10 @@ interface Props {
   post: <T,>(url: string, payload?: object) => Promise<T>;
   apiBase: string;
   jira_project_key?: string | null;
+  integration_Type: string | null;
 }
 
-export function ResultItem({ tc, post, apiBase, jira_project_key }: Props) {
+export function ResultItem({ tc, post, apiBase, jira_project_key, integration_Type }: Props) {
   const [open, setOpen] = useState(false);
   const [pushing, setPushing] = useState(false);
   const [jiraLink, setJiraLink] = useState<string>("");
@@ -126,23 +128,53 @@ export function ResultItem({ tc, post, apiBase, jira_project_key }: Props) {
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            onClick={pushToJira}
-            disabled={pushing}
-            className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs hover:bg-slate-50 disabled:opacity-60"
-          >
-            {pushing ? "Pushing…" : "Push to Jira"}
-          </button>
-          {jiraLink && (
-            <a
-              href={jiraLink}
-              target="_blank"
-              rel="noreferrer"
-              className="text-xs text-emerald-700 hover:underline"
+        {integration_Type === "Jira" && jira_project_key ? (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={pushToJira}
+              disabled={pushing}
+              className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs hover:bg-slate-50 disabled:opacity-60"
             >
-              View Issue↗
-            </a>
-          )}
+              {pushing ? "Pushing…" : "Push to Jira"}
+            </button>
+
+            {jiraLink && (
+              <a
+                href={jiraLink}
+                target="_blank"
+                rel="noreferrer"
+                className="text-xs text-emerald-700 hover:underline"
+              >
+                View Issue ↗
+              </a>
+            )}
+          </div>
+        ) : null}
+
+        {integration_Type === "Azure" && jira_project_key ? (
+          <div className="flex items-center gap-2">
+            <button
+             // onClick={}
+              disabled={pushing}
+              className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs hover:bg-slate-50 disabled:opacity-60"
+            >
+              {pushing ? "Pushing…" : "Push to Azure"}
+            </button>
+
+            {jiraLink && (
+              <a
+                href={jiraLink}
+                target="_blank"
+                rel="noreferrer"
+                className="text-xs text-emerald-700 hover:underline"
+              >
+                View Issue ↗
+              </a>
+            )}
+          </div>
+        ) : null}
+
+
           <button
             onClick={() => setOpen((v) => !v)}
             className="text-xs text-slate-600 hover:underline"
@@ -151,6 +183,7 @@ export function ResultItem({ tc, post, apiBase, jira_project_key }: Props) {
           </button>
         </div>
       </div>
+      
 
       {open && (
         <>

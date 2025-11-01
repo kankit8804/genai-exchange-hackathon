@@ -14,6 +14,7 @@ interface Project {
   projectName: string;
   description: string;
   jiraProject?: string;
+  integrationType: string;
   createdAt?: string;
 }
 
@@ -51,13 +52,15 @@ useEffect(() => {
           projectName: project.projectName,
           description: project.description,
           jiraProject: project.jiraProject,
+          integrationType: project.integrationType,
           createdAt: project.createdAt
             ? new Date(project.createdAt.seconds * 1000).toLocaleString()
             : "N/A", 
         };
       });
 
-      setProjects(data);
+      console.log("Fetched projects:", data);
+      setProjects(data);      
 
     } catch (err) {
       console.error("Error fetching projects:", err);
@@ -136,7 +139,7 @@ useEffect(() => {
                   <motion.div
                     key={p.id}
                     whileHover={{ scale: 1.01 }}
-                    onClick={() => router.push(`/dashboard?projectId=${p.id}&projectName=${encodeURIComponent(p.projectName)}&description=${encodeURIComponent(p.description)}&jiraProjectKey=${encodeURIComponent(p.jiraProject || "KAN")}`)}
+                    onClick={() => router.push(`/dashboard?projectId=${p.id}&projectName=${encodeURIComponent(p.projectName)}&description=${encodeURIComponent(p.description)}&jiraProjectKey=${encodeURIComponent(p.jiraProject || "KAN")}&integrationType=${encodeURIComponent(p.integrationType)}`)}
                     className="cursor-pointer p-4 rounded-lg border border-slate-100 hover:bg-slate-50 transition flex justify-between items-center"
                   >
                     <div>
