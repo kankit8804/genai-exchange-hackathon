@@ -14,12 +14,14 @@ export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
 
+ 
 
   const logout = async () => {
     await auth.signOut();
     router.replace("/login");
   };
-  
+
+  if (["/login", "/signup", "/forgot"].includes(pathname)) return null;
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

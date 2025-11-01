@@ -11,6 +11,7 @@ import { Card, CardHeader, ResultItem, EmptyState } from "@/app/dashboard/compon
 import { useTestStore } from "@/app/store/testCaseStore";
 import { fetchTestCasesByProject } from "@/app/store/testCaseStore";
 import { useNotificationStore } from "@/app/store/notificationStore";
+import ShareProjectModal from "@/app/dashboard/components/ShareProjectModal";
 import ALMIntegration from "@/app/dashboard/components/ALMIntegration";
 
 /* ========= Types ========= */
@@ -260,7 +261,15 @@ export default function Dashboard() {
       <header className="sticky top-0 z-50 bg-[#0b1220] text-white shadow-[0_1px_0_rgba(255,255,255,0.06)]">
         <div className="mx-auto max-w-7xl px-4 py-4 flex items-center gap-4">
           <div className="leading-tight">
-            <h1 className="text-xl font-semibold text-white">{projectName}</h1>
+            <h1 className="text-xl font-semibold text-white">
+              {/* Orbit AI — Test Case Generator */}
+              {projectName}
+            </h1>
+            {projectId && (
+              <div className="ml-4">
+                <ShareProjectModal projectId={projectId} />
+              </div>
+            )}
             <p className="text-sm text-slate-300">{description}</p>
           </div>
           <div className="ml-auto flex items-center gap-3">
@@ -404,7 +413,9 @@ export default function Dashboard() {
               {loadingStoredCases ? (
                 <div className="flex flex-col items-center justify-center py-8 text-emerald-700">
                   <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-300 border-t-emerald-700"></div>
-                  <p className="mt-3 text-sm font-medium">Fetching stored test cases...</p>
+                  <p className="mt-3 text-sm font-medium">
+                    Fetching stored test cases...
+                  </p>
                 </div>
               ) : hasResults ? (
                 <ul className="space-y-3">
@@ -429,7 +440,8 @@ export default function Dashboard() {
 
           {/* Single pro tip (kept) */}
           <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">
-            Pro tip: keep one requirement per run for crisper, atomic test cases.
+            Pro tip: keep one requirement per run for crisper, atomic test
+            cases.
           </div>
         </aside>
       </main>
