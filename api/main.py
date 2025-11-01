@@ -412,7 +412,8 @@ def get_testcases_by_project(project_id: str):
             expected_result, 
             steps, 
             created_at, 
-            source_excerpt
+            project_id,
+            source_excerpt,
         FROM `{TABLE_TC}`
         WHERE project_id = @pid
         ORDER BY created_at DESC
@@ -424,17 +425,25 @@ def get_testcases_by_project(project_id: str):
             ),
         )
 
-    url = f"{JIRA_BASE}/rest/api/3/issue"
-    payload = {
-        "fields": {
-            "project": {"key": JIRA_PROJECT_KEY},
-            "summary": body.summary or f"Test Case {body.test_id}",
-            "description": adf,  # ADF document (required by v3)
-            "labels": ["orbit-ai", "test-case"],
-            "issuetype": {"name": JIRA_ISSUE_TYPE}  # "Task" works on free Jira
-        }
-    }
+        results = []
+        for row in job.result():
+            results.append({
+                "test_id": row["test_id"],
+                "req_id": row["req_id"],
+                "title": row["title"],
+                "severity": row["severity"],
+                "expected_result": row["expected_result"],
+                "steps": row["steps"],
+                "createdAt": row["created_at"],
+                "project_id": row["project_id"],
+                "source_excerpt": row["source_excerpt"],
+            })
 
+        return {"ok": True, "count": len(results), "test_cases": results}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching testcases: {e}")
+    
 
 class PushBody(BaseModel):
     summary: str
