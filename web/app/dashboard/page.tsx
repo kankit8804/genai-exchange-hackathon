@@ -56,7 +56,7 @@ export default function Dashboard() {
   const searchParams = useSearchParams();
   const projectName = searchParams.get("projectName");
   const pDescription = searchParams.get("description");
-  const projectId = searchParams.get("projectid");
+  const projectId = searchParams.get("projectId");
   const [hasStoredCases, setHasStoredCases] = useState(false);
   const [loadingStoredCases, setLoadingStoredCases] = useState(false);
   const jiraProjoctKey = searchParams.get("jiraProjectKey");
