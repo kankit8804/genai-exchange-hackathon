@@ -12,7 +12,7 @@ import {
 import { collection, query, where, orderBy, getDocs } from "firebase/firestore";
 import { useAuth } from "@/lib/firebase/AuthContext";
 import { db } from "@/lib/firebase/initFirebase";
-
+import { useNotificationStore } from "@/app/store/notificationStore";
 import { Card, ResultItem, EmptyState } from "@/app/dashboard/components/ui";
 import { fetchTestCasesByProject, useTestStore } from "@/app/store/testCaseStore";
 
@@ -59,6 +59,7 @@ export default function ViewAllPage() {
     const [projects, setProjects] = useState<Project[]>([]);
     const [selectedProject, setSelectedProject] = useState<string | null>(null);
     const [loadingStoredCases, setLoadingStoredCases] = useState(false);
+    const { showNotification } = useNotificationStore();
 
 
     const fetchProjects = async () => {
@@ -100,21 +101,31 @@ export default function ViewAllPage() {
 
     const fetchData = async (projectId: string) => {
         try {
+
+            const currentProjectId = testCases[0]?.project_id;
+            if (currentProjectId && currentProjectId === projectId) {
+                console.log("Skipping fetch — same project selected:", projectId);
+                return;
+            }
+
             setTestCases([]);
             setLoadingStoredCases(true);
 
             const existing: any = await fetchTestCasesByProject(projectId);
-            console.log("Fetched testcases:", existing);
+
 
             const list = Array.isArray(existing)
                 ? existing
                 : Array.isArray(existing?.test_cases)
                     ? existing.test_cases
                     : [];
+            if (list.length > 0) {
+                showNotification(`Loaded ${list.length} previously generated test case${list.length > 1 ? "s" : ""}.`);
+            }
 
             setTestCases(list);
         } catch (err) {
-            console.error("Failed to fetch existing test cases:", err);
+            console.error("❌ Failed to fetch existing test cases:", err);
         } finally {
             setLoadingStoredCases(false);
         }
@@ -163,10 +174,33 @@ export default function ViewAllPage() {
         setTestCases(updated);
     };
 
-    // --- RENDER COLUMN ---
-    const renderColumn = (title: string, droppableId: string, cases: TestCase[], showAdd?: boolean) => (
+    const renderColumn = (
+        title: string,
+        droppableId: string,
+        cases: TestCase[],
+        showAdd?: boolean
+    ) => (
         <div>
-            <h2 className="text-lg font-semibold mb-3 text-slate-700">{title}</h2>
+            <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                <span
+                    className={`${title === "Generated"
+                            ? "text-emerald-600"
+                            : title === "Pushed"
+                                ? "text-blue-600"
+                                : title === "Removed"
+                                    ? "text-red-600"
+                                    : "text-slate-700"
+                        }`}
+                >
+                    {title}
+                </span>
+                {cases.length > 0 && (
+                    <span className="text-sm font-medium text-slate-500">
+                        ({cases.length})
+                    </span>
+                )}
+            </h2>
+
 
             <Droppable droppableId={droppableId}>
                 {(provided: DroppableProvided) => (
@@ -191,12 +225,17 @@ export default function ViewAllPage() {
                                                     : dragProvided.draggableProps.style?.transform,
                                             }}
                                             className={`transition-all duration-150 ${snapshot.isDragging
-                                                ? "scale-[1.02] shadow-2xl cursor-grabbing"
-                                                : "cursor-grab"
+                                                    ? "scale-[1.02] shadow-2xl cursor-grabbing"
+                                                    : "cursor-grab"
                                                 }`}
                                         >
                                             <div className={snapshot.isDragging ? "bg-white rounded-md" : ""}>
-                                                <ResultItem key={tc.test_id} tc={tc} post={post} apiBase={API_BASE}/>
+                                                <ResultItem
+                                                    key={tc.test_id}
+                                                    tc={tc}
+                                                    post={post}
+                                                    apiBase={API_BASE}
+                                                />
                                             </div>
                                         </div>
                                     )}
