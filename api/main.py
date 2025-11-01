@@ -583,3 +583,40 @@ def push_jira(body: PushBody):
     update_is_pushed_by_test_id(body.test_id, True)
 
     return {"ok": True, "external_key": issue_key, "external_url": issue_url}
+
+@app.post("/manual/testcase")
+async def create_manual_testcase(body: dict):
+    """
+    Create a manual test case entry in BigQuery.
+    Required fields: title, steps, expected_result, preconditions, severity, project_id, user_id
+    """
+    try:
+        req_id = (body.get("req_id") or f"REQ-{uuid.uuid4().hex[:6].upper()}").strip()
+        tc = {
+            "test_id": "TEST-" + uuid.uuid4().hex[:8].upper(),
+            "req_id": req_id,
+            "title": body.get("title") or "(no title)",
+            "steps": body.get("steps") or [],
+            "expected_result": body.get("expected_result") or "",
+            "preconditions": body.get("preconditions") or "",
+            "severity": body.get("severity") or "Medium",
+            "trace_link": "",
+            "source_excerpt": "",
+            "model_version": MODEL_NAME,
+            "prompt_version": PROMPT_VER,
+            "created_at": now_ts(),
+            "created_by": body.get("user_id") or "unknown_user",
+            "project_id": body.get("project_id") or "",
+        }
+
+        errs = get_bq().insert_rows_json(TABLE_TC, [tc])
+        if errs:
+            log.error(f"Manual test case insert error: {errs}")
+            return {"ok": False, "error": str(errs)}
+
+        return {"ok": True, "test_id": tc["test_id"], "req_id" : tc["req_id"], "createdAt": tc["created_at"]}
+
+    except Exception as e:
+        log.error(f"Manual test case creation failed: {e}")
+        return {"ok": False, "error": str(e)}
+

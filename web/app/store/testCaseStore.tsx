@@ -17,12 +17,16 @@ export interface TestCase {
 
 interface TestStore {
   testCases: TestCase[];
-  setTestCases: (cases: TestCase[]) => void;
+  setTestCases: (updater: TestCase[] | ((prev: TestCase[]) => TestCase[])) => void;
 }
 
 export const useTestStore = create<TestStore>((set) => ({
   testCases: [],
-  setTestCases: (cases) => set({ testCases: cases }),
+  setTestCases: (updater) =>
+    set((state) => ({
+      testCases:
+        typeof updater === "function" ? updater(state.testCases) : updater,
+    })),
 }));
 
 export async function fetchTestCasesByProject(projectId: string): Promise<TestCase[]> {

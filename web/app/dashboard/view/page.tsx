@@ -64,6 +64,7 @@ export default function ViewAllPage() {
     const [loadingStoredCases, setLoadingStoredCases] = useState(false);
     const { showNotification } = useNotificationStore();
     const [showModal, setShowModal] = useState(false);
+    const [addingStatus, setAddingStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
 
 
     const fetchProjects = async () => {
@@ -178,6 +179,47 @@ export default function ViewAllPage() {
         setTestCases(updated);
     };
 
+    const handleSaveTestCase = async (data: any) => {
+        if (!selectedProject) {
+            showNotification("Please select a project before adding a test case.", true);
+            return;
+        }
+
+        try {
+            setAddingStatus("loading");
+            const payload = { ...data, project_id: selectedProject };
+            const response = await post<{ test_id: string , req_id: string, createdAt: string}>(`${API_BASE}/manual/testcase`, payload);
+
+            if (response?.test_id) {
+                showNotification(`Test ID: ${response.test_id} created successfully!`);
+                setTestCases((prev) => [
+                    ...prev,
+                    {
+                        ...data,
+                        test_id: response.test_id,
+                        req_id: response.req_id,
+                        project_id: selectedProject,
+                        isPushed: false,
+                        isRemoved: false,
+                        createdAt: response.createdAt,
+                    },
+                ]);
+                setAddingStatus("success");
+            } else {
+                showNotification("Unexpected response from server. Please try again.", true);
+                setAddingStatus("error");
+            }
+        } catch (err: any) {
+            console.error(err);
+            showNotification("Failed to create test case. Please check your data and try again.", true);
+            setAddingStatus("error");
+        } finally {
+
+            setTimeout(() => setAddingStatus("idle"), 2000);
+        }
+    };
+
+
     const renderColumn = (
         title: string,
         droppableId: string,
@@ -185,23 +227,56 @@ export default function ViewAllPage() {
         showAdd?: boolean
     ) => (
         <div>
-            <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                <span
-                    className={`${title === "Generated"
-                        ? "text-emerald-600"
-                        : title === "Pushed"
-                            ? "text-blue-600"
-                            : title === "Removed"
-                                ? "text-red-600"
-                                : "text-slate-700"
-                        }`}
-                >
-                    {title}
-                </span>
-                {cases.length > 0 && (
-                    <span className="text-sm font-medium text-slate-500">
-                        ({cases.length})
+            <h2 className="text-lg font-semibold mb-3 flex items-center justify-between">
+                {/* Left side: title + count */}
+                <div className="flex items-center gap-2">
+                    <span
+                        className={`${title === "Generated"
+                            ? "text-emerald-600"
+                            : title === "Pushed"
+                                ? "text-blue-600"
+                                : title === "Removed"
+                                    ? "text-red-600"
+                                    : "text-slate-700"
+                            }`}
+                    >
+                        {title}
                     </span>
+
+                    {cases.length > 0 && (
+                        <span className="text-sm font-medium text-slate-500">
+                            ({cases.length})
+                        </span>
+                    )}
+                </div>
+
+                {/* Right-aligned plus icon (only for Generated) */}
+                {title === "Generated" && (
+                    <button
+                        onClick={() => setShowModal(true)}
+                        title="Add Test Case"
+                        className="
+        mr-[5px]
+        flex items-center justify-center
+        w-7 h-7
+        rounded-md
+        bg-emerald-100/70
+        hover:bg-emerald-200
+        transition-colors
+        shadow-sm
+      "
+                    >
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="w-4 h-4 text-emerald-600"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth={2}
+                        >
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                        </svg>
+                    </button>
                 )}
             </h2>
 
@@ -265,6 +340,7 @@ export default function ViewAllPage() {
                     <AddTestCaseModal
                         open={showModal}
                         onClose={() => setShowModal(false)}
+                        onSave={handleSaveTestCase}
                     />
                 </>
             )}
@@ -349,6 +425,35 @@ export default function ViewAllPage() {
                     )}
                 </Card>
             </div>
+            {addingStatus !== "idle" && (
+                <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 bg-white shadow-xl border border-emerald-200 rounded-lg px-4 py-3">
+                    {addingStatus === "loading" && (
+                        <>
+                            <div className="h-5 w-5 animate-spin rounded-full border-2 border-emerald-400 border-t-emerald-700"></div>
+                            <p className="text-sm font-medium text-emerald-700">Adding test case...</p>
+                        </>
+                    )}
+
+                    {addingStatus === "success" && (
+                        <>
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                            <p className="text-sm font-medium text-green-700">Test case added successfully!</p>
+                        </>
+                    )}
+
+                    {addingStatus === "error" && (
+                        <>
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                            <p className="text-sm font-medium text-red-700">Failed to add test case</p>
+                        </>
+                    )}
+                </div>
+            )}
+
         </div>
     );
 }
