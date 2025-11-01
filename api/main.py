@@ -396,3 +396,48 @@ async def generate_unified(
         "test_cases": saved,
         "project_id": project_id,
     }
+
+@app.get("/testcases/project/{project_id}")
+def get_testcases_by_project(project_id: str):
+    """
+    Fetch all generated test cases for a given project_id from BigQuery.
+    """
+    try:
+        query = f"""
+        SELECT 
+            test_id, 
+            req_id, 
+            title, 
+            severity, 
+            expected_result, 
+            steps, 
+            created_at, 
+            source_excerpt
+        FROM `{TABLE_TC}`
+        WHERE project_id = @pid
+        ORDER BY created_at DESC
+        """
+        job = get_bq().query(
+            query,
+            job_config=bigquery.QueryJobConfig(
+                query_parameters=[bigquery.ScalarQueryParameter("pid", "STRING", project_id)]
+            ),
+        )
+
+        results = []
+        for row in job.result():
+            results.append({
+                "test_id": row["test_id"],
+                "req_id": row["req_id"],
+                "title": row["title"],
+                "severity": row["severity"],
+                "expected_result": row["expected_result"],
+                "steps": row["steps"],
+                "created_at": row["created_at"],
+                "source_excerpt": row["source_excerpt"],
+            })
+
+        return {"ok": True, "count": len(results), "test_cases": results}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching testcases: {e}")

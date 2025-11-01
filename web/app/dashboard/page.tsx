@@ -7,7 +7,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { healthCheck } from "@/utils/api";
 import { Card, CardHeader, ResultItem, EmptyState } from "@/app/dashboard/components/ui";
 import { useTestStore } from "@/app/store/testCaseStore";
-
+import { fetchTestCasesByProject } from "@/app/store/testCaseStore";
+import { useNotificationStore } from "@/app/store/notificationStore";
 
 /* ========= Types ========= */
 interface TestCase {
@@ -33,7 +34,7 @@ interface JiraResponse {
 export default function Dashboard() {
   const [user, loading] = useAuthState(auth);
   const router = useRouter();
- 
+  const { showNotification } = useNotificationStore();
   const [apiHealthy, setApiHealthy] = useState(false);
 
   // Controlled inputs
@@ -43,6 +44,8 @@ export default function Dashboard() {
   // const [file, setFile] = useState<File | null>(null);
 
   const { testCases, setTestCases } = useTestStore();
+
+
   const [summary, setSummary] = useState("No results yet.");
 
   // Separate loading states
@@ -55,6 +58,51 @@ export default function Dashboard() {
   const projectName = searchParams.get("projectName");
   const pDescription = searchParams.get("description");
   const projectId = searchParams.get("projectId");
+  const [hasStoredCases, setHasStoredCases] = useState(false);
+  const [loadingStoredCases, setLoadingStoredCases] = useState(false);
+
+
+  useEffect(() => {
+    if (!projectId) return;
+
+    const fetchData = async () => {
+      try {
+        setTestCases([]);
+        setLoadingStoredCases(true);
+        setSummary("Looking for previously stored testcases for this project!");
+
+        const existing: any = await fetchTestCasesByProject(projectId);
+        console.log("Fetched testcases:", existing);
+
+        const list =
+          Array.isArray(existing)
+            ? existing
+            : Array.isArray(existing?.test_cases)
+              ? existing.test_cases
+              : [];
+
+        if (list.length > 0) {
+          setSummary("Previously stored testcases found!");
+          setHasStoredCases(true);
+        } else {
+          setSummary("No testcases found.");
+          setHasStoredCases(false);
+        }
+
+        setTestCases(list);
+      } catch (err) {
+        console.error("Failed to fetch existing test cases:", err);
+        setSummary("Error fetching stored testcases.");
+        setHasStoredCases(false);
+      } finally {
+        setLoadingStoredCases(false);
+      }
+    };
+
+    fetchData();
+  }, [projectId, setTestCases]);
+
+
 
   console.log(
     `Project Name:${projectName}, Description${pDescription}, ProjecctId${projectId}`
@@ -102,13 +150,25 @@ export default function Dashboard() {
         body: formData,
       });
 
-      console.log("Response status:", res.status);
-
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
 
       setSummary(data.summary ?? "Generated successfully!");
-      setTestCases(data.test_cases ?? []);
+
+      showNotification("Generated successfully!");
+
+      if (projectId) {
+        const refreshed: any = await fetchTestCasesByProject(projectId);
+
+        const list =
+          Array.isArray(refreshed)
+            ? refreshed
+            : Array.isArray(refreshed?.test_cases)
+              ? refreshed.test_cases
+              : [];
+
+        setTestCases(list);
+      }
     } catch (err) {
       console.error("Error generating:", err);
       alert("Error generating test cases.");
@@ -116,6 +176,8 @@ export default function Dashboard() {
       setLoading(false);
     }
   };
+
+
 
   // Redirect if not logged in
   useEffect(() => {
@@ -224,11 +286,10 @@ export default function Dashboard() {
           {/* Right: status + logout */}
           <div className="ml-auto flex items-center gap-3">
             <span
-              className={`rounded-full px-3 py-1 text-xs font-medium ${
-                apiHealthy
-                  ? "bg-emerald-500/15 text-emerald-200 ring-1 ring-emerald-500/30"
-                  : "bg-rose-500/15 text-rose-200 ring-1 ring-rose-500/30"
-              }`}
+              className={`rounded-full px-3 py-1 text-xs font-medium ${apiHealthy
+                ? "bg-emerald-500/15 text-emerald-200 ring-1 ring-emerald-500/30"
+                : "bg-rose-500/15 text-rose-200 ring-1 ring-rose-500/30"
+                }`}
             >
               {apiHealthy ? "Connected ✓" : "Offline ✗"}
             </span>
@@ -258,7 +319,7 @@ export default function Dashboard() {
                 placeholder="REQ-ID (optional)"
               />
             </div>
-            
+
             {/*Upload File Section*/}
             <input
               id="files"
@@ -327,7 +388,7 @@ export default function Dashboard() {
               )}
             </div>
           </Card>
-          
+
           {/* Free Text Generate*/}
           <Card>
             <CardHeader
@@ -361,16 +422,17 @@ export default function Dashboard() {
             <div className="mt-3 flex gap-2">
               <ButtonGhost onClick={downloadJSON}>Download JSON</ButtonGhost>
               <ButtonGhost onClick={downloadCSV}>Download CSV</ButtonGhost>
-               {hasResults && (
-                <ButtonGhost
+
+              {/* Only show View All if not loading */}
+              {!loadingStoredCases && hasResults && (
+                <ViewAllButton
                   onClick={() => {
-                   router.push("/dashboard/view");
+                    router.push("/dashboard/view");
                   }}
                 >
                   View All
-                </ButtonGhost>
+                </ViewAllButton>
               )}
-
             </div>
 
             <div
@@ -380,7 +442,13 @@ export default function Dashboard() {
                   : "mt-2"
               }
             >
-              {hasResults ? (
+              {/* Loader state */}
+              {loadingStoredCases ? (
+                <div className="flex flex-col items-center justify-center py-8 text-emerald-700">
+                  <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-300 border-t-emerald-700"></div>
+                  <p className="mt-3 text-sm font-medium">Fetching stored test cases...</p>
+                </div>
+              ) : hasResults ? (
                 <ul className="space-y-3">
                   {sorted.map((tc) => (
                     <ResultItem
@@ -398,10 +466,10 @@ export default function Dashboard() {
           </Card>
 
           <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">
-            Pro tip: keep one requirement per run for crisper, atomic test
-            cases.
+            Pro tip: keep one requirement per run for crisper, atomic test cases.
           </div>
         </aside>
+
       </main>
 
       <footer className="py-8 text-center text-xs text-slate-500">
@@ -473,6 +541,23 @@ function ButtonGhost({
     <button
       onClick={onClick}
       className="rounded-md border border-slate-200 bg-white px-3 py-2 text-xs hover:bg-slate-50"
+    >
+      {children}
+    </button>
+  );
+}
+
+function ViewAllButton({
+  children,
+  onClick,
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="inline-flex items-center gap-2 rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-300 disabled:opacity-60"
     >
       {children}
     </button>
