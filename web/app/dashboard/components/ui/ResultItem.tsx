@@ -104,7 +104,7 @@ export function ResultItem({ tc, post, apiBase }: Props) {
             <div className="mt-3">
               <a
                 className="text-xs text-emerald-700 hover:underline"
-                href={`/traceability/${tc.req_id}`}
+                href={`/traceability/${tc.req_id}?test_id=${tc.test_id}`}
                 target="_blank"
                 rel="noopener noreferrer"
               >

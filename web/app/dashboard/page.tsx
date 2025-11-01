@@ -8,6 +8,9 @@ import { healthCheck } from "@/utils/api";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase/initFirebase";
 import { Card, CardHeader, ResultItem, EmptyState } from "@/app/dashboard/components/ui";
+import { useTestStore } from "@/app/store/testCaseStore";
+import { fetchTestCasesByProject } from "@/app/store/testCaseStore";
+import { useNotificationStore } from "@/app/store/notificationStore";
 
 
 /* ========= Types ========= */
@@ -34,7 +37,7 @@ interface JiraResponse {
 export default function Dashboard() {
   const [user, loading] = useAuthState(auth);
   const router = useRouter();
-
+  const { showNotification } = useNotificationStore();
   const [apiHealthy, setApiHealthy] = useState(false);
 
   // Controlled inputs
@@ -43,7 +46,9 @@ export default function Dashboard() {
   const [reqId, setReqId] = useState("");
   // const [file, setFile] = useState<File | null>(null);
 
-  const [testCases, setTestCases] = useState<TestCase[]>([]);
+  const { testCases, setTestCases } = useTestStore();
+
+
   const [summary, setSummary] = useState("No results yet.");
 
   const API_BASE = "http://127.0.0.1:8000";
@@ -52,10 +57,54 @@ export default function Dashboard() {
   const projectName = searchParams.get("projectName");
   const pDescription = searchParams.get("description");
   const projectId = searchParams.get("projectId");
-  const jiraProjoctKey = searchParams.get("jiraProjectKey");
+  const [hasStoredCases, setHasStoredCases] = useState(false);
+  const [loadingStoredCases, setLoadingStoredCases] = useState(false);
+
+
+  useEffect(() => {
+    if (!projectId) return;
+
+    const fetchData = async () => {
+      try {
+        setTestCases([]);
+        setLoadingStoredCases(true);
+        setSummary("Looking for previously stored testcases for this project!");
+
+        const existing: any = await fetchTestCasesByProject(projectId);
+        console.log("Fetched testcases:", existing);
+
+        const list =
+          Array.isArray(existing)
+            ? existing
+            : Array.isArray(existing?.test_cases)
+              ? existing.test_cases
+              : [];
+
+        if (list.length > 0) {
+          setSummary("Previously stored testcases found!");
+          setHasStoredCases(true);
+        } else {
+          setSummary("No testcases found.");
+          setHasStoredCases(false);
+        }
+
+        setTestCases(list);
+      } catch (err) {
+        console.error("Failed to fetch existing test cases:", err);
+        setSummary("Error fetching stored testcases.");
+        setHasStoredCases(false);
+      } finally {
+        setLoadingStoredCases(false);
+      }
+    };
+
+    fetchData();
+  }, [projectId, setTestCases]);
+
+
 
   console.log(
-    `Project Name:${projectName}, Description${pDescription}, ProjecctId:${projectId}, jiraProjectKey:${jiraProjoctKey}`
+    `Project Name:${projectName}, Description${pDescription}, ProjecctId${projectId}`
   );
 
   // Unified testcase Generation
@@ -91,6 +140,8 @@ export default function Dashboard() {
       formData.append("description", description.trim());
     }
 
+    if (projectId) formData.append("project_id", projectId);
+
     try {
       setLoading(true);
       const res = await fetch(`${API_BASE}/generate_unified`, {
@@ -98,13 +149,25 @@ export default function Dashboard() {
         body: formData,
       });
 
-      console.log("Response status:", res.status);
-
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
 
       setSummary(data.summary ?? "Generated successfully!");
-      setTestCases(data.test_cases ?? []);
+
+      showNotification("Generated successfully!");
+
+      if (projectId) {
+        const refreshed: any = await fetchTestCasesByProject(projectId);
+
+        const list =
+          Array.isArray(refreshed)
+            ? refreshed
+            : Array.isArray(refreshed?.test_cases)
+              ? refreshed.test_cases
+              : [];
+
+        setTestCases(list);
+      }
     } catch (err) {
       console.error("Error generating:", err);
       alert("Error generating test cases.");
@@ -112,6 +175,8 @@ export default function Dashboard() {
       setLoading(false);
     }
   };
+
+
 
   // Redirect if not logged in
   useEffect(() => {
@@ -137,9 +202,12 @@ export default function Dashboard() {
   // Downloads
   const downloadJSON = (): void => {
     if (!testCases.length) return alert("Nothing to download");
-    const blob = new Blob([JSON.stringify({ test_cases: testCases }, null, 2)], {
-      type: "application/json",
-    });
+    const blob = new Blob(
+      [JSON.stringify({ test_cases: testCases }, null, 2)],
+      {
+        type: "application/json",
+      }
+    );
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
     a.download = `generated-testcases.json`;
@@ -148,13 +216,19 @@ export default function Dashboard() {
 
   const downloadCSV = (): void => {
     if (!testCases.length) return alert("Nothing to download");
-    const headers = ["req_id", "test_id", "title", "severity", "expected_result"];
+    const headers = [
+      "req_id",
+      "test_id",
+      "title",
+      "severity",
+      "expected_result",
+    ];
     const lines = [headers.join(",")].concat(
       testCases.map((r) =>
         [r.req_id, r.test_id, r.title, r.severity, r.expected_result]
           .map((v) => `"${(v ?? "").replace(/"/g, '""')}"`)
-          .join(","),
-      ),
+          .join(",")
+      )
     );
     const blob = new Blob([lines.join("\n")], { type: "text/csv" });
     const a = document.createElement("a");
@@ -164,15 +238,25 @@ export default function Dashboard() {
   };
 
   // Results sorting
-  const severityOrder = { Critical: 0, High: 1, Medium: 2, Low: 3, Unknown: 4 } as const;
+  const severityOrder = {
+    Critical: 0,
+    High: 1,
+    Medium: 2,
+    Low: 3,
+    Unknown: 4,
+  } as const;
   const sorted = useMemo(
     () =>
       [...testCases].sort(
         (a, b) =>
-          (severityOrder[(a.severity as keyof typeof severityOrder) ?? "Unknown"] ?? 4) -
-          (severityOrder[(b.severity as keyof typeof severityOrder) ?? "Unknown"] ?? 4),
+          (severityOrder[
+            (a.severity as keyof typeof severityOrder) ?? "Unknown"
+          ] ?? 4) -
+          (severityOrder[
+            (b.severity as keyof typeof severityOrder) ?? "Unknown"
+          ] ?? 4)
       ),
-    [testCases],
+    [testCases]
   );
 
   const hasResults = sorted.length > 0;
@@ -196,18 +280,15 @@ export default function Dashboard() {
               {/* Orbit AI — Test Case Generator */}
               {projectName}
             </h1>
-            <p className="text-sm text-slate-300">
-              {pDescription}
-            </p>
-
+            <p className="text-sm text-slate-300">{description}</p>
           </div>
 
           {/* Right: status + logout */}
           <div className="ml-auto flex items-center gap-3">
             <span
               className={`rounded-full px-3 py-1 text-xs font-medium ${apiHealthy
-                  ? "bg-emerald-500/15 text-emerald-200 ring-1 ring-emerald-500/30"
-                  : "bg-rose-500/15 text-rose-200 ring-1 ring-rose-500/30"
+                ? "bg-emerald-500/15 text-emerald-200 ring-1 ring-emerald-500/30"
+                : "bg-rose-500/15 text-rose-200 ring-1 ring-rose-500/30"
                 }`}
             >
               {apiHealthy ? "Connected ✓" : "Offline ✗"}
@@ -238,7 +319,7 @@ export default function Dashboard() {
                 placeholder="REQ-ID (optional)"
               />
             </div>
-            
+
             {/*Upload File Section*/}
             <input
               id="files"
@@ -248,16 +329,18 @@ export default function Dashboard() {
               className="hidden"
               onChange={(e) => setFiles(e.target.files)}
             />
-                <label
-                  htmlFor="files"
-                  className="mt-3 flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm hover:bg-slate-50"
-                >
+            <label
+              htmlFor="files"
+              className="mt-3 flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm hover:bg-slate-50"
+            >
               <span className="truncate">
                 {files?.length
                   ? `${files.length} file(s) selected`
                   : "Choose File(s)"}
               </span>
-              <span className="rounded-lg bg-emerald-600 px-3 px-3 py-1 text-xs text-white hover:bg-emerald-700">Browse</span>
+              <span className="rounded-lg bg-emerald-600 px-3 px-3 py-1 text-xs text-white hover:bg-emerald-700">
+                Browse
+              </span>
             </label>
             
             {files?.length > 0 && (
@@ -303,7 +386,12 @@ export default function Dashboard() {
                 <ul className="mt-2 space-y-1 text-sm text-emerald-700">
                   {links.map((l, i) => (
                     <li key={i}>
-                      <a href={l} target="_blank" rel="noreferrer" className="hover:underline">
+                      <a
+                        href={l}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="hover:underline"
+                      >
                         {l}
                       </a>
                     </li>
@@ -312,7 +400,7 @@ export default function Dashboard() {
               )}
             </div>
           </Card>
-          
+
           {/* Free Text Generate*/}
           <Card>
             <CardHeader
@@ -331,7 +419,7 @@ export default function Dashboard() {
 
           <div className="bottom-3 right-4">
             <PrimaryButton
-             onClick={handleGenerate}
+              onClick={handleGenerate}
               loading={loading}
               label="Generate Test Cases"
               loadingLabel="Generating..."
@@ -347,17 +435,17 @@ export default function Dashboard() {
             <div className="mt-3 flex gap-2">
               <ButtonGhost onClick={downloadJSON}>Download JSON</ButtonGhost>
               <ButtonGhost onClick={downloadCSV}>Download CSV</ButtonGhost>
-              {hasResults && (
-                <ButtonGhost
+
+              {/* Only show View All if not loading */}
+              {!loadingStoredCases && hasResults && (
+                <ViewAllButton
                   onClick={() => {
-                    const encoded = encodeURIComponent(JSON.stringify(testCases));
-                    router.push(`/dashboard/view?data=${encoded}`);
+                    router.push("/dashboard/view");
                   }}
                 >
                   View All
-                </ButtonGhost>
+                </ViewAllButton>
               )}
-
             </div>
 
             <div
@@ -367,7 +455,13 @@ export default function Dashboard() {
                   : "mt-2"
               }
             >
-              {hasResults ? (
+              {/* Loader state */}
+              {loadingStoredCases ? (
+                <div className="flex flex-col items-center justify-center py-8 text-emerald-700">
+                  <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-300 border-t-emerald-700"></div>
+                  <p className="mt-3 text-sm font-medium">Fetching stored test cases...</p>
+                </div>
+              ) : hasResults ? (
                 <ul className="space-y-3">
                   {sorted.map((tc) => (
                     <ResultItem
@@ -389,9 +483,12 @@ export default function Dashboard() {
             Pro tip: keep one requirement per run for crisper, atomic test cases.
           </div>
         </aside>
+
       </main>
 
-      <footer className="py-8 text-center text-xs text-slate-500">© Orbit AI</footer>
+      <footer className="py-8 text-center text-xs text-slate-500">
+        © Orbit AI
+      </footer>
     </div>
   );
 }
@@ -458,6 +555,23 @@ function ButtonGhost({
     <button
       onClick={onClick}
       className="rounded-md border border-slate-200 bg-white px-3 py-2 text-xs hover:bg-slate-50"
+    >
+      {children}
+    </button>
+  );
+}
+
+function ViewAllButton({
+  children,
+  onClick,
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="inline-flex items-center gap-2 rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-300 disabled:opacity-60"
     >
       {children}
     </button>
