@@ -443,3 +443,99 @@ def get_testcases_by_project(project_id: str):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching testcases: {e}")
+    
+
+class PushBody(BaseModel):
+    summary: str
+    steps: Optional[List[str]] = None
+    test_id: str | None = None
+    req_id: str | None = None
+    jira_domain: str
+    jira_email: str
+    jira_api_token: str
+    jira_project_key: str
+    jira_issue_type: str = "Task"  # optional default
+
+
+def build_adf_description(summary: str, steps: list[str] | None = None, expected: str | None = None):
+    """
+    Builds a valid Atlassian Document Format (ADF) JSON for Jira Cloud.
+    Steps are rendered as an ordered (numbered) list.
+    """
+    adf = {
+        "type": "doc",
+        "version": 1,
+        "content": []
+    }
+
+    adf["content"].append({
+        "type": "paragraph",
+        "content": [{"type": "text", "text": f"🧪 {summary or 'No summary provided'}"}]
+    })
+
+    if steps and isinstance(steps, list):
+        adf["content"].append({
+            "type": "orderedList",
+            "content": [
+                {
+                    "type": "listItem",
+                    "content": [
+                        {
+                            "type": "paragraph",
+                            "content": [{"type": "text", "text": step}]
+                        }
+                    ]
+                } for step in steps
+            ]
+        })
+
+    if expected:
+        adf["content"].append({
+            "type": "paragraph",
+            "content": [{"type": "text", "text": f" Expected Result: {expected}"}]
+        })
+
+    return adf
+
+
+
+@app.post("/push/jira")
+def push_jira(body: PushBody):
+
+    if not (body.jira_domain and body.jira_email and body.jira_api_token and body.jira_project_key):
+        raise HTTPException(400, "Missing Jira credentials from request body")
+
+    jira_domain = body.jira_domain.replace("https://", "").replace("http://", "")
+
+    adf = build_adf_description(
+        summary=body.summary or f"Test Case {body.test_id}",
+        steps=body.steps or None,
+        expected=None
+    )
+
+    url = f"https://{jira_domain}/rest/api/3/issue"
+    payload = {
+        "fields": {
+            "project": {"key": body.jira_project_key},
+            "summary": body.summary or f"Test Case {body.test_id}",
+            "description": adf,
+            "labels": ["orbit-ai", "test-case"],
+            "issuetype": {"name": body.jira_issue_type}
+        }
+    }
+
+    r = requests.post(
+        url,
+        json=payload,
+        auth=(body.jira_email, body.jira_api_token),
+        headers={"Accept": "application/json", "Content-Type": "application/json"}
+    )
+
+    if r.status_code not in (200, 201):
+        raise HTTPException(500, f"Jira push failed: {r.text}")
+
+    data = r.json()
+    issue_key = data.get("key")
+    issue_url = f"https://{jira_domain}/browse/{issue_key}"
+
+    return {"ok": True, "external_key": issue_key, "external_url": issue_url}

@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { SeverityBadge } from "./SeverityBadge";
+import { auth, db } from "@/lib/firebase/initFirebase";
+import { doc, getDoc } from "firebase/firestore";
 
 interface TestCase {
   req_id: string;
@@ -16,37 +18,86 @@ interface TestCase {
 
 interface JiraResponse {
   external_url: string;
+  external_key?: string;
+  detail?: string;
 }
 
 interface Props {
   tc: TestCase;
   post: <T,>(url: string, payload?: object) => Promise<T>;
   apiBase: string;
+  jira_project_key?: string | null;
 }
 
-export function ResultItem({ tc, post, apiBase }: Props) {
+export function ResultItem({ tc, post, apiBase, jira_project_key }: Props) {
   const [open, setOpen] = useState(false);
   const [pushing, setPushing] = useState(false);
-  const [jira, setJira] = useState("");
+  const [jiraLink, setJiraLink] = useState<string>("");
+
+  const user = auth.currentUser;
 
   const pushToJira = async (): Promise<void> => {
     try {
+      if (!user) {
+        alert("You must be logged in!");
+        return;
+      }
+
       setPushing(true);
-      const data = await post<JiraResponse>(`${apiBase}/push/jira`, {
-        req_id: tc.req_id,
-        test_id: tc.test_id,
+
+      const userRef = doc(db, "users", user.uid);
+      const userSnap = await getDoc(userRef);
+
+      if (!userSnap.exists()) {
+        alert("No user data found in Firestore.");
+        return;
+      }
+
+      const userData = userSnap.data();
+      const jira = userData.jira;
+
+      if (!jira || !jira.domain || !jira.email || !jira.apiToken) {
+        alert("Please save your Jira credentials first.");
+        return;
+      }
+
+      const payload = {
+        jira_domain: jira.domain,
+        jira_email: jira.email,
+        jira_api_token: jira.apiToken,
+        jira_project_key: jira_project_key,
+        jira_issue_type: "Task",
+        uid: user.uid,
         summary: tc.title,
         steps: tc.steps,
+        test_id: tc.test_id,
+        req_id: tc.req_id,
+      };
+
+      const res = await fetch(`${apiBase}/push/jira`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       });
-      setJira(data.external_url);
+
+      const result: JiraResponse = await res.json();
+
+      if (res.ok && result.external_url) {
+        setJiraLink(result.external_url);
+        alert(`Jira issue created: ${result.external_key}\n${result.external_url}`);
+      } else {
+        console.error(result);
+        alert(`Failed to create issue: ${result.detail || "Unknown error"}`);
+      }
     } catch (e) {
+      console.error(e);
       alert(e instanceof Error ? e.message : "Error pushing to Jira");
     } finally {
       setPushing(false);
     }
   };
 
-    const formattedDate = tc.createdAt
+  const formattedDate = tc.createdAt
     ? new Date(tc.createdAt).toLocaleString("en-US", {
         month: "short",
         day: "numeric",
@@ -67,7 +118,7 @@ export function ResultItem({ tc, post, apiBase }: Props) {
           <div className="mt-1 text-[12px] text-slate-500">
             Test: {tc.test_id} • REQ: {tc.req_id}
           </div>
-           {formattedDate && (
+          {formattedDate && (
             <div className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1">
               <span>Created: {formattedDate}</span>
             </div>
@@ -82,9 +133,9 @@ export function ResultItem({ tc, post, apiBase }: Props) {
           >
             {pushing ? "Pushing…" : "Push to Jira"}
           </button>
-          {jira && (
+          {jiraLink && (
             <a
-              href={jira}
+              href={jiraLink}
               target="_blank"
               rel="noreferrer"
               className="text-xs text-emerald-700 hover:underline"

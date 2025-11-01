@@ -5,10 +5,13 @@ import { auth } from "@/lib/firebase/initFirebase";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { useRouter, useSearchParams } from "next/navigation";
 import { healthCheck } from "@/utils/api";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase/initFirebase";
 import { Card, CardHeader, ResultItem, EmptyState } from "@/app/dashboard/components/ui";
 import { useTestStore } from "@/app/store/testCaseStore";
 import { fetchTestCasesByProject } from "@/app/store/testCaseStore";
 import { useNotificationStore } from "@/app/store/notificationStore";
+
 
 /* ========= Types ========= */
 interface TestCase {
@@ -48,10 +51,6 @@ export default function Dashboard() {
 
   const [summary, setSummary] = useState("No results yet.");
 
-  // Separate loading states
-  // const [loadingTextGen, setLoadingTextGen] = useState(false);
-  // const [loadingUploadGen, setLoadingUploadGen] = useState(false);
-
   const API_BASE = "http://127.0.0.1:8000";
 
   const searchParams = useSearchParams();
@@ -60,7 +59,11 @@ export default function Dashboard() {
   const projectId = searchParams.get("projectId");
   const [hasStoredCases, setHasStoredCases] = useState(false);
   const [loadingStoredCases, setLoadingStoredCases] = useState(false);
-
+  const jiraProjoctKey = searchParams.get("jiraProjectKey");
+ 
+  console.log(
+    `Project Name:${projectName}, Description${pDescription}, ProjecctId:${projectId}, jiraProjectKey:${jiraProjoctKey}`
+  );
 
   useEffect(() => {
     if (!projectId) {
@@ -350,10 +353,22 @@ export default function Dashboard() {
                 Browse
               </span>
             </label>
-
-            <p className="text-xs text-slate-500">
-              PDF, DOCX, TXT, Markdown supported.
-            </p>
+            
+            {(files ?? []).length > 0 && (
+              <ul className="mt-2 space-y-1 text-sm text-slate-600">
+                {Array.from(files!).map((file, index) => (
+                  <li
+                    key={index}
+                    className="flex items-center justify-between rounded-md border border-slate-100 bg-slate-50 px-3 py-1"
+                  >
+                    <span className="truncate">{file.name}</span>
+                    <span className="text-xs text-slate-400">
+                      {(file.size / 1024).toFixed(1)} KB
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </Card>
 
           {/* Attach Link Section*/}
@@ -408,6 +423,7 @@ export default function Dashboard() {
                 value={freeText}
                 onChange={(e) => setFreeText(e.target.value)}
                 placeholder="Paste a requirement (no PHI)"
+                className="flex-1 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-emerald-300"
               />
             </div>
           </Card>
@@ -473,6 +489,7 @@ export default function Dashboard() {
                       tc={tc}
                       post={post}
                       apiBase={API_BASE}
+                      jira_project_key={jiraProjoctKey}
                     />
                   ))}
                 </ul>
