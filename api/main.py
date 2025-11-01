@@ -147,7 +147,7 @@ def call_model(prompt: str) -> str:
     parts = resp.candidates[0].content.parts if resp.candidates else []
     return "".join(getattr(p, "text", "") for p in parts)
 
-def save_testcases(req_id: str, tcs: List[dict], text: str) -> List[dict]:
+def save_testcases(req_id: str, tcs: List[dict], text: str, project_id: Optional[str] = None) -> List[dict]:
     rows = []
     BASE_URL = "http://localhost:3000"
     for tc in tcs:
@@ -170,7 +170,7 @@ def save_testcases(req_id: str, tcs: List[dict], text: str) -> List[dict]:
             "prompt_version": PROMPT_VER,
             "created_at": now_ts(),
             "created_by": CREATED_BY,
-            "project_id": tc.get("project_id", ""),  # optional
+            "project_id": project_id or tc.get("project_id", ""),
         })
 
     errs = get_bq().insert_rows_json(TABLE_TC, rows)
@@ -384,7 +384,7 @@ async def generate_unified(
         if project_id:
             tc["project_id"] = project_id  # link test case to project
 
-    saved = save_testcases(rid, tcs,combined_text)
+    saved = save_testcases(rid, tcs, combined_text, project_id)
 
     return {
         "ok": True,
@@ -394,4 +394,50 @@ async def generate_unified(
         "source_type": source_type,
         "generated": len(saved),
         "test_cases": saved,
+        "project_id": project_id,
     }
+
+@app.get("/testcases/project/{project_id}")
+def get_testcases_by_project(project_id: str):
+    """
+    Fetch all generated test cases for a given project_id from BigQuery.
+    """
+    try:
+        query = f"""
+        SELECT 
+            test_id, 
+            req_id, 
+            title, 
+            severity, 
+            expected_result, 
+            steps, 
+            created_at, 
+            source_excerpt
+        FROM `{TABLE_TC}`
+        WHERE project_id = @pid
+        ORDER BY created_at DESC
+        """
+        job = get_bq().query(
+            query,
+            job_config=bigquery.QueryJobConfig(
+                query_parameters=[bigquery.ScalarQueryParameter("pid", "STRING", project_id)]
+            ),
+        )
+
+        results = []
+        for row in job.result():
+            results.append({
+                "test_id": row["test_id"],
+                "req_id": row["req_id"],
+                "title": row["title"],
+                "severity": row["severity"],
+                "expected_result": row["expected_result"],
+                "steps": row["steps"],
+                "created_at": row["created_at"],
+                "source_excerpt": row["source_excerpt"],
+            })
+
+        return {"ok": True, "count": len(results), "test_cases": results}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching testcases: {e}")
