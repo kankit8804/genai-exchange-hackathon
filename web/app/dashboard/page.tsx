@@ -427,7 +427,7 @@ export default function Dashboard() {
               {!loadingStoredCases && hasResults && (
                 <ViewAllButton
                   onClick={() => {
-                    router.push("/dashboard/view");
+                    router.push("/dashboard/view?fromDashboard=true");
                   }}
                 >
                   View All

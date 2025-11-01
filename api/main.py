@@ -412,7 +412,8 @@ def get_testcases_by_project(project_id: str):
             expected_result, 
             steps, 
             created_at, 
-            source_excerpt
+            project_id,
+            source_excerpt,
         FROM `{TABLE_TC}`
         WHERE project_id = @pid
         ORDER BY created_at DESC
@@ -434,6 +435,7 @@ def get_testcases_by_project(project_id: str):
                 "expected_result": row["expected_result"],
                 "steps": row["steps"],
                 "created_at": row["created_at"],
+                "project_id": row["project_id"],
                 "source_excerpt": row["source_excerpt"],
             })
 
