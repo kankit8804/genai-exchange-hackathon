@@ -17,7 +17,7 @@ export default function AddTestCaseModal({
 }: AddTestCaseModalProps) {
     const [title, setTitle] = useState("");
     const [severity, setSeverity] = useState("Low");
-    const [expectedResult, setExpectedResult] = useState("");
+    const [expected_result, setExpectedResult] = useState("");
     const [steps, setSteps] = useState<string[]>([""]);
 
     if (!open) return null;
@@ -29,7 +29,7 @@ export default function AddTestCaseModal({
         setSteps((prev) => prev.map((s, i) => (i === index ? value : s)));
 
     const handleSave = () => {
-        const testCaseData = { title, severity, expectedResult, steps };
+        const testCaseData = { title, severity, expected_result, steps }; 
         if (onSave) onSave(testCaseData);
         onClose();
     };
@@ -69,7 +69,7 @@ export default function AddTestCaseModal({
                         <label className="block text-sm font-medium text-slate-700 mb-2">
                             Severity
                         </label>
-                        <div className="flex flex-wrap gap-3 mt-1"> {/* Increased gap */}
+                        <div className="flex flex-wrap gap-3 mt-1">
                             {["Low", "Medium", "High", "Critical"].map((level) => {
                                 const styles: Record<string, string> = {
                                     Low: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200",
@@ -93,22 +93,6 @@ export default function AddTestCaseModal({
                                 );
                             })}
                         </div>
-                    </div>
-
-
-
-                    {/* Expected Result */}
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">
-                            Expected Result
-                        </label>
-                        <textarea
-                            value={expectedResult}
-                            onChange={(e) => setExpectedResult(e.target.value)}
-                            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-400 resize-none"
-                            rows={3}
-                            placeholder="Describe the expected result"
-                        />
                     </div>
 
                     {/* Steps */}
@@ -146,22 +130,59 @@ export default function AddTestCaseModal({
                             ))}
                         </div>
                     </div>
+
+                    {/* Expected Result */}
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">
+                            Expected Result
+                        </label>
+                        <textarea
+                            value={expected_result}
+                            onChange={(e) => setExpectedResult(e.target.value)}
+                            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-400 resize-none"
+                            rows={3}
+                            placeholder="Describe the expected result"
+                        />
+                    </div>
                 </div>
 
                 {/* Footer */}
-                <div className="mt-8 flex justify-end gap-3">
-                    <button
-                        onClick={onClose}
-                        className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
-                    >
-                        Discard
-                    </button>
-                    <button
-                        onClick={handleSave}
-                        className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 transition-colors"
-                    >
-                        Save
-                    </button>
+                <div className="mt-8 flex flex-col items-center gap-4">
+                    <div className="flex items-center text-sm text-slate-600 bg-slate-50 px-3 py-2 rounded-md shadow-sm">
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="w-4 h-4 text-blue-500 mr-2"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth={2}
+                        >
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20 10 10 0 000-20z"
+                            />
+                        </svg>
+                        <span>
+                            <strong>Note:</strong> Manually created test cases will appear in the{" "}
+                            <span className="text-emerald-600 font-medium">Generated</span> section.
+                        </span>
+                    </div>
+
+                    <div className="flex justify-end gap-3 w-full">
+                        <button
+                            onClick={onClose}
+                            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+                        >
+                            Discard
+                        </button>
+                        <button
+                            onClick={handleSave}
+                            className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 transition-colors"
+                        >
+                            Save
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>,
