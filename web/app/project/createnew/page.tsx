@@ -30,7 +30,7 @@ export default function NewProjectPage() {
 
       const newProjectId = docRef.id;
 
-      router.push(`/dashboard?projectName=${encodeURIComponent(projectName)}&description=${encodeURIComponent(description)}&projectid=${newProjectId}`);
+      router.push(`/dashboard?projectName=${encodeURIComponent(projectName)}&description=${encodeURIComponent(description)}&projectid=${newProjectId}&jiraProjectKey=${encodeURIComponent(jiraProject)}`);
     } catch (error) {
       console.error("Error creating project:", error);
       alert("Something went wrong!");

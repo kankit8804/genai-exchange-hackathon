@@ -5,10 +5,13 @@ import { auth } from "@/lib/firebase/initFirebase";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { useRouter, useSearchParams } from "next/navigation";
 import { healthCheck } from "@/utils/api";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase/initFirebase";
 import { Card, CardHeader, ResultItem, EmptyState } from "@/app/dashboard/components/ui";
 import { useTestStore } from "@/app/store/testCaseStore";
 import { fetchTestCasesByProject } from "@/app/store/testCaseStore";
 import { useNotificationStore } from "@/app/store/notificationStore";
+
 
 /* ========= Types ========= */
 interface TestCase {
@@ -47,10 +50,6 @@ export default function Dashboard() {
 
 
   const [summary, setSummary] = useState("No results yet.");
-
-  // Separate loading states
-  // const [loadingTextGen, setLoadingTextGen] = useState(false);
-  // const [loadingUploadGen, setLoadingUploadGen] = useState(false);
 
   const API_BASE = "http://127.0.0.1:8000";
 
@@ -199,6 +198,7 @@ export default function Dashboard() {
     return (await res.json()) as T;
   };
 
+
   // Downloads
   const downloadJSON = (): void => {
     if (!testCases.length) return alert("Nothing to download");
@@ -342,10 +342,22 @@ export default function Dashboard() {
                 Browse
               </span>
             </label>
-
-            <p className="text-xs text-slate-500">
-              PDF, DOCX, TXT, Markdown supported.
-            </p>
+            
+            {files?.length > 0 && (
+              <ul className="mt-2 space-y-1 text-sm text-slate-600">
+                {Array.from(files).map((file, index) => (
+                  <li
+                    key={index}
+                    className="flex items-center justify-between rounded-md border border-slate-100 bg-slate-50 px-3 py-1"
+                  >
+                    <span className="truncate">{file.name}</span>
+                    <span className="text-xs text-slate-400">
+                      {(file.size / 1024).toFixed(1)} KB
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </Card>
 
           {/* Attach Link Section*/}
@@ -400,6 +412,7 @@ export default function Dashboard() {
                 value={freeText}
                 onChange={(e) => setFreeText(e.target.value)}
                 placeholder="Paste a requirement (no PHI)"
+                className="flex-1 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-emerald-300"
               />
             </div>
           </Card>
@@ -456,6 +469,7 @@ export default function Dashboard() {
                       tc={tc}
                       post={post}
                       apiBase={API_BASE}
+                      jira_project_key={jiraProjoctKey}
                     />
                   ))}
                 </ul>
@@ -566,3 +580,145 @@ function ViewAllButton({
 
 
 
+function ResultItem({
+  tc,
+  post,
+  apiBase,
+  jira_project_key,
+}: {
+  tc: TestCase;
+  post: <T>(url: string, payload?: object) => Promise<T>;
+  apiBase: string;
+  jira_project_key: string | null;
+}) {
+  const [open, setOpen] = useState(false);
+  const [pushing, setPushing] = useState(false);
+  const [jira, setJira] = useState("");
+  const user = auth.currentUser;
+
+const handlePushToJira = async () => {
+  if (!user) return alert("You must be logged in!");
+
+  console.log("Pushing test case to Jira for user:", user.uid);
+
+  const userRef = doc(db, "users", user.uid);
+  const userSnap = await getDoc(userRef);
+
+  
+    if (!userSnap.exists()) {
+      alert("No user data found in Firestore.");
+      return;
+    }
+
+    const userData = userSnap.data();
+    const jira = userData.jira;
+
+  if (!jira || !jira.domain || !jira.email || !jira.apiToken) {
+    alert("Please save your Jira credentials first.");
+    return;
+  }
+
+  const payload = {
+    jira_domain: jira.domain,
+    jira_email: jira.email,
+    jira_api_token: jira.apiToken,
+    jira_project_key: jira_project_key,  
+    jira_issue_type: "Task",
+    uid: user.uid,
+
+    summary: tc.title,
+    steps: tc.steps,
+    test_id: tc.test_id,
+    req_id: tc.req_id,
+  };
+
+    const res = await fetch(`${apiBase}/push/jira`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+
+    console.log("Jira push response status:", res.status);
+    const result = await res.json();
+
+  if (res.ok) {
+    alert(`Jira issue created: ${result.external_key}\n${result.external_url}`);
+  } else {
+    console.error(result);
+    alert(`Failed to create issue: ${result.detail || "Unknown error"}`);
+  }
+};
+
+  return (
+    <li className="rounded-lg border border-slate-200 bg-white p-4">
+      <div className="flex items-start gap-3">
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <h4 className="text-sm font-semibold">{tc.title}</h4>
+            <SeverityBadge level={tc.severity} />
+          </div>
+          <div className="mt-1 text-[12px] text-slate-500">
+            Test: {tc.test_id} • REQ: {tc.req_id}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handlePushToJira}
+            disabled={pushing}
+            className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs hover:bg-slate-50 disabled:opacity-60"
+          >
+            {pushing ? "Pushing…" : "Push to Jira"}
+          </button>
+          {jira && (
+            <a
+              href={jira}
+              target="_blank"
+              rel="noreferrer"
+              className="text-xs text-emerald-700 hover:underline"
+            >
+              View ↗
+            </a>
+          )}
+          <button
+            onClick={() => setOpen((v) => !v)}
+            className="text-xs text-slate-600 hover:underline"
+          >
+            {open ? "Hide" : "Details"}
+          </button>
+        </div>
+      </div>
+
+      {open && (
+        <>
+          <div className="my-3 h-px bg-slate-200" />
+          <div className="text-xs text-slate-700">
+            <div className="mb-1 font-semibold text-slate-800">Steps</div>
+            <ol className="list-decimal pl-5 space-y-1">
+              {tc.steps.map((s, i) => (
+                <li key={i}>{s}</li>
+              ))}
+            </ol>
+          </div>
+          <div className="mt-3 text-xs">
+            <div className="mb-1 font-semibold text-slate-800">Expected</div>
+            <div className="text-slate-700">{tc.expected_result}</div>
+          </div>
+          {tc.req_id && (
+            <div className="mt-3">
+              <a
+                className="text-xs text-emerald-700 hover:underline"
+                href={`/traceability/${tc.req_id}?test_id=${tc.test_id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Traceability Link ↗
+              </a>
+            </div>
+          )}
+        </>
+      )}
+    </li>
+  );
+}
