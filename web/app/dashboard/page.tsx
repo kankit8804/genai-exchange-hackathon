@@ -6,6 +6,8 @@ import { useAuthState } from "react-firebase-hooks/auth";
 import { useRouter, useSearchParams } from "next/navigation";
 import { healthCheck } from "@/utils/api";
 import { Card, CardHeader, ResultItem, EmptyState } from "@/app/dashboard/components/ui";
+import { useTestStore } from "@/app/store/testCaseStore";
+
 
 /* ========= Types ========= */
 interface TestCase {
@@ -31,7 +33,7 @@ interface JiraResponse {
 export default function Dashboard() {
   const [user, loading] = useAuthState(auth);
   const router = useRouter();
-
+ 
   const [apiHealthy, setApiHealthy] = useState(false);
 
   // Controlled inputs
@@ -40,21 +42,23 @@ export default function Dashboard() {
   const [reqId, setReqId] = useState("");
   // const [file, setFile] = useState<File | null>(null);
 
-  const [testCases, setTestCases] = useState<TestCase[]>([]);
+  const { testCases, setTestCases } = useTestStore();
   const [summary, setSummary] = useState("No results yet.");
 
   // Separate loading states
   // const [loadingTextGen, setLoadingTextGen] = useState(false);
   // const [loadingUploadGen, setLoadingUploadGen] = useState(false);
 
-  const API_BASE = "https://orbit-api-938180057345.us-central1.run.app";
+  const API_BASE = "http://127.0.0.1:8000";
 
   const searchParams = useSearchParams();
   const projectName = searchParams.get("projectName");
   const pDescription = searchParams.get("description");
   const projectId = searchParams.get("projectId");
 
-  console.log(`Project Name:${projectName}, Description${pDescription}, ProjecctId${projectId}`);
+  console.log(
+    `Project Name:${projectName}, Description${pDescription}, ProjecctId${projectId}`
+  );
 
   // Unified testcase Generation
   const [files, setFiles] = useState<FileList | null>(null);
@@ -88,6 +92,8 @@ export default function Dashboard() {
     if (description.trim()) {
       formData.append("description", description.trim());
     }
+
+    if (projectId) formData.append("project_id", projectId);
 
     try {
       setLoading(true);
@@ -131,13 +137,15 @@ export default function Dashboard() {
     return (await res.json()) as T;
   };
 
-
   // Downloads
   const downloadJSON = (): void => {
     if (!testCases.length) return alert("Nothing to download");
-    const blob = new Blob([JSON.stringify({ test_cases: testCases }, null, 2)], {
-      type: "application/json",
-    });
+    const blob = new Blob(
+      [JSON.stringify({ test_cases: testCases }, null, 2)],
+      {
+        type: "application/json",
+      }
+    );
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
     a.download = `generated-testcases.json`;
@@ -146,13 +154,19 @@ export default function Dashboard() {
 
   const downloadCSV = (): void => {
     if (!testCases.length) return alert("Nothing to download");
-    const headers = ["req_id", "test_id", "title", "severity", "expected_result"];
+    const headers = [
+      "req_id",
+      "test_id",
+      "title",
+      "severity",
+      "expected_result",
+    ];
     const lines = [headers.join(",")].concat(
       testCases.map((r) =>
         [r.req_id, r.test_id, r.title, r.severity, r.expected_result]
           .map((v) => `"${(v ?? "").replace(/"/g, '""')}"`)
-          .join(","),
-      ),
+          .join(",")
+      )
     );
     const blob = new Blob([lines.join("\n")], { type: "text/csv" });
     const a = document.createElement("a");
@@ -162,15 +176,25 @@ export default function Dashboard() {
   };
 
   // Results sorting
-  const severityOrder = { Critical: 0, High: 1, Medium: 2, Low: 3, Unknown: 4 } as const;
+  const severityOrder = {
+    Critical: 0,
+    High: 1,
+    Medium: 2,
+    Low: 3,
+    Unknown: 4,
+  } as const;
   const sorted = useMemo(
     () =>
       [...testCases].sort(
         (a, b) =>
-          (severityOrder[(a.severity as keyof typeof severityOrder) ?? "Unknown"] ?? 4) -
-          (severityOrder[(b.severity as keyof typeof severityOrder) ?? "Unknown"] ?? 4),
+          (severityOrder[
+            (a.severity as keyof typeof severityOrder) ?? "Unknown"
+          ] ?? 4) -
+          (severityOrder[
+            (b.severity as keyof typeof severityOrder) ?? "Unknown"
+          ] ?? 4)
       ),
-    [testCases],
+    [testCases]
   );
 
   const hasResults = sorted.length > 0;
@@ -194,19 +218,17 @@ export default function Dashboard() {
               {/* Orbit AI — Test Case Generator */}
               {projectName}
             </h1>
-            <p className="text-sm text-slate-300">
-              {pDescription}
-            </p>
-
+            <p className="text-sm text-slate-300">{description}</p>
           </div>
 
           {/* Right: status + logout */}
           <div className="ml-auto flex items-center gap-3">
             <span
-              className={`rounded-full px-3 py-1 text-xs font-medium ${apiHealthy
+              className={`rounded-full px-3 py-1 text-xs font-medium ${
+                apiHealthy
                   ? "bg-emerald-500/15 text-emerald-200 ring-1 ring-emerald-500/30"
                   : "bg-rose-500/15 text-rose-200 ring-1 ring-rose-500/30"
-                }`}
+              }`}
             >
               {apiHealthy ? "Connected ✓" : "Offline ✗"}
             </span>
@@ -246,19 +268,23 @@ export default function Dashboard() {
               className="hidden"
               onChange={(e) => setFiles(e.target.files)}
             />
-                <label
-                  htmlFor="files"
-                  className="mt-3 flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm hover:bg-slate-50"
-                >
+            <label
+              htmlFor="files"
+              className="mt-3 flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm hover:bg-slate-50"
+            >
               <span className="truncate">
                 {files?.length
                   ? `${files.length} file(s) selected`
                   : "Choose File(s)"}
               </span>
-              <span className="rounded-lg bg-emerald-600 px-3 px-3 py-1 text-xs text-white hover:bg-emerald-700">Browse</span>
+              <span className="rounded-lg bg-emerald-600 px-3 px-3 py-1 text-xs text-white hover:bg-emerald-700">
+                Browse
+              </span>
             </label>
 
-            <p className="text-xs text-slate-500">PDF, DOCX, TXT, Markdown supported.</p>
+            <p className="text-xs text-slate-500">
+              PDF, DOCX, TXT, Markdown supported.
+            </p>
           </Card>
 
           {/* Attach Link Section*/}
@@ -287,7 +313,12 @@ export default function Dashboard() {
                 <ul className="mt-2 space-y-1 text-sm text-emerald-700">
                   {links.map((l, i) => (
                     <li key={i}>
-                      <a href={l} target="_blank" rel="noreferrer" className="hover:underline">
+                      <a
+                        href={l}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="hover:underline"
+                      >
                         {l}
                       </a>
                     </li>
@@ -314,7 +345,7 @@ export default function Dashboard() {
 
           <div className="bottom-3 right-4">
             <PrimaryButton
-             onClick={handleGenerate}
+              onClick={handleGenerate}
               loading={loading}
               label="Generate Test Cases"
               loadingLabel="Generating..."
@@ -330,11 +361,10 @@ export default function Dashboard() {
             <div className="mt-3 flex gap-2">
               <ButtonGhost onClick={downloadJSON}>Download JSON</ButtonGhost>
               <ButtonGhost onClick={downloadCSV}>Download CSV</ButtonGhost>
-              {hasResults && (
+               {hasResults && (
                 <ButtonGhost
                   onClick={() => {
-                    const encoded = encodeURIComponent(JSON.stringify(testCases));
-                    router.push(`/dashboard/view?data=${encoded}`);
+                   router.push("/dashboard/view");
                   }}
                 >
                   View All
@@ -353,7 +383,12 @@ export default function Dashboard() {
               {hasResults ? (
                 <ul className="space-y-3">
                   {sorted.map((tc) => (
-                    <ResultItem key={tc.test_id} tc={tc} post={post} apiBase={API_BASE} />
+                    <ResultItem
+                      key={tc.test_id}
+                      tc={tc}
+                      post={post}
+                      apiBase={API_BASE}
+                    />
                   ))}
                 </ul>
               ) : (
@@ -363,12 +398,15 @@ export default function Dashboard() {
           </Card>
 
           <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">
-            Pro tip: keep one requirement per run for crisper, atomic test cases.
+            Pro tip: keep one requirement per run for crisper, atomic test
+            cases.
           </div>
         </aside>
       </main>
 
-      <footer className="py-8 text-center text-xs text-slate-500">© Orbit AI</footer>
+      <footer className="py-8 text-center text-xs text-slate-500">
+        © Orbit AI
+      </footer>
     </div>
   );
 }
