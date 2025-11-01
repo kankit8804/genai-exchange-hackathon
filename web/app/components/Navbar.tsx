@@ -14,12 +14,12 @@ export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
 
-  if (["/login", "/signup", "/forgot"].includes(pathname)) return null;
 
   const logout = async () => {
     await auth.signOut();
     router.replace("/login");
   };
+  
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -33,6 +33,8 @@ export default function Navbar() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  if (["/login", "/signup", "/forgot"].includes(pathname)) return null;
 
   return (
     <nav className="sticky top-0 z-50 bg-white shadow-sm">
