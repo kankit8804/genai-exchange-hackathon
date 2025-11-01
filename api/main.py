@@ -6,7 +6,6 @@ from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import traceability
-from alm_azure import router as alm_azure_router
 import requests
 import difflib
 # Vertex AI / BigQuery
@@ -208,7 +207,6 @@ def upsert_requirement(req_id: str, title: str, text: str):
 
 # -------------------- Routes --------------------
 app.include_router(traceability.router)
-app.include_router(alm_azure_router)  # <-- ADD THIS
 
 @app.get("/health")
 def health():
@@ -621,4 +619,56 @@ async def create_manual_testcase(body: dict):
     except Exception as e:
         log.error(f"Manual test case creation failed: {e}")
         return {"ok": False, "error": str(e)}
+    
+from fastapi import HTTPException
+from google.cloud import bigquery
+from typing import Any, Dict, List
 
+@app.post("/manual/testcase/update")
+async def update_manual_testcase(body: Dict[str, Any]):
+    """
+    Update a manual test case entry in BigQuery by test_id.
+    """
+    try:
+        test_id = body.get("test_id")
+        if not test_id:
+            raise HTTPException(status_code=400, detail="Missing test_id")
+
+        client = get_bq()
+        table = TABLE_TC
+
+        allowed_fields = ["title", "expected_result", "steps", "severity"]
+        update_fields = {k: body.get(k) for k in allowed_fields if k in body}
+
+        if not update_fields:
+            raise HTTPException(status_code=400, detail="No fields to update")
+
+        set_clauses = []
+        query_params = [bigquery.ScalarQueryParameter("test_id", "STRING", test_id)]
+
+        for k, v in update_fields.items():
+            if k == "steps" and isinstance(v, list):
+                set_clauses.append(f"{k} = @{k}")
+                query_params.append(bigquery.ArrayQueryParameter(k, "STRING", v))
+            else:
+                set_clauses.append(f"{k} = @{k}")
+                query_params.append(bigquery.ScalarQueryParameter(k, "STRING", v))
+
+        set_clause_str = ", ".join(set_clauses)
+
+        query = f"""
+            UPDATE `{table}`
+            SET {set_clause_str}
+            WHERE test_id = @test_id
+        """
+
+        job_config = bigquery.QueryJobConfig(query_parameters=query_params)
+        job = client.query(query, job_config=job_config)
+        job.result()
+
+        print("Testcase {test_id} updated successfully.")
+        return {"ok": True, "test_id": test_id}
+
+    except Exception as e:
+        print("Update error:", e)
+        return {"ok": False, "error": str(e)}

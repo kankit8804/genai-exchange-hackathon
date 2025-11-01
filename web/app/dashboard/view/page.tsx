@@ -104,11 +104,11 @@ export default function ViewAllPage() {
     };
 
 
-    const fetchData = async (projectId: string) => {
+    const fetchData = async (projectId: string, skipCheck: boolean = false) => {
         try {
-
             const currentProjectId = testCases[0]?.project_id;
-            if (currentProjectId && currentProjectId === projectId) {
+
+            if (!skipCheck && currentProjectId && currentProjectId === projectId) {
                 console.log("Skipping fetch — same project selected:", projectId);
                 return;
             }
@@ -118,14 +118,16 @@ export default function ViewAllPage() {
 
             const existing: any = await fetchTestCasesByProject(projectId);
 
-
             const list = Array.isArray(existing)
                 ? existing
                 : Array.isArray(existing?.test_cases)
                     ? existing.test_cases
                     : [];
+
             if (list.length > 0) {
-                showNotification(`Loaded ${list.length} previously generated test case${list.length > 1 ? "s" : ""}.`);
+                showNotification(
+                    `Loaded ${list.length} previously generated test case${list.length > 1 ? "s" : ""}.`
+                );
             }
 
             setTestCases(list);
@@ -135,7 +137,6 @@ export default function ViewAllPage() {
             setLoadingStoredCases(false);
         }
     };
-
 
     useEffect(() => {
         if (user?.uid) fetchProjects();
@@ -188,7 +189,7 @@ export default function ViewAllPage() {
         try {
             setAddingStatus("loading");
             const payload = { ...data, project_id: selectedProject };
-            const response = await post<{ test_id: string , req_id: string, createdAt: string}>(`${API_BASE}/manual/testcase`, payload);
+            const response = await post<{ test_id: string, req_id: string, createdAt: string }>(`${API_BASE}/manual/testcase`, payload);
 
             if (response?.test_id) {
                 showNotification(`Test ID: ${response.test_id} created successfully!`);
@@ -314,6 +315,10 @@ export default function ViewAllPage() {
                                                     tc={tc}
                                                     post={post}
                                                     apiBase={API_BASE}
+                                                    onUpdated={() => {
+                                                        console.log("this is getting called ");
+                                                        if (selectedProject) fetchData(selectedProject, true);
+                                                    }}
                                                 />
                                             </div>
                                         </div>
