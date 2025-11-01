@@ -2,13 +2,20 @@ import os, json, uuid, re, logging
 from datetime import datetime, timezone
 from typing import List, Optional, Union
 
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Depends, Body
+from firebase_admin import auth as fb_auth
+from firebase_utils import get_firestore_client
+from firebase_admin import firestore
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import traceability
 from alm_azure import router as alm_azure_router
 import requests
 import difflib
+
+from dotenv import load_dotenv
+load_dotenv()
+
 # Vertex AI / BigQuery
 import vertexai
 from vertexai.generative_models import GenerativeModel, GenerationConfig
@@ -635,3 +642,58 @@ def push_jira_bulk(body: list[PushBody]):
     return {"results": results}
 
 
+
+
+@app.get("/projects/{project_id}/members")
+def get_project_members(project_id: str):
+    db = get_firestore_client()
+    proj_ref = db.collection("projects").document(project_id)
+    members_ref = proj_ref.collection("members")
+    members = [m.to_dict() for m in members_ref.stream()]
+
+    proj_doc = proj_ref.get()
+    owner_email = None
+    if proj_doc.exists:
+        uid = proj_doc.to_dict().get("uid")
+        try:
+            owner_email = fb_auth.get_user(uid).email
+        except Exception:
+            owner_email = None
+
+    if owner_email and not any(m["email"] == owner_email for m in members):
+        members.insert(0, {"email": owner_email, "role": "owner"})
+    return {"ok": True, "members": members}
+
+
+@app.post("/projects/{project_id}/share")
+def share_project(project_id: str, body: dict = Body(...)):
+    """
+    body = {"email": "invitee@example.com", "addedBy": "owner@example.com"}
+    """
+    email = body.get("email")
+    added_by = body.get("addedBy")
+
+    if not email:
+        raise HTTPException(status_code=400, detail="Missing email")
+
+    db = get_firestore_client()
+    proj_ref = db.collection("projects").document(project_id)
+    members_ref = proj_ref.collection("members")
+
+    # Check existing members
+    existing = [m.to_dict() for m in members_ref.stream()]
+    if len(existing) >= 5:
+        raise HTTPException(status_code=400, detail="Max 5 members allowed")
+    if any(m.get("email") == email for m in existing):
+        raise HTTPException(status_code=400, detail="User already added")
+
+    # ✅ Use email as the document ID instead of random ID
+    member_doc = members_ref.document(email)
+    member_doc.set({
+        "email": email,
+        "addedBy": added_by or None,
+        "role": "member",
+        "addedAt": firestore.SERVER_TIMESTAMP
+    })
+
+    return {"ok": True, "message": f"{email} added successfully"}
