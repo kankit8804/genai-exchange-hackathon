@@ -25,7 +25,7 @@ Generation rules:
 - Avoid PHI; do not invent real patient details.
 - If the requirement is ambiguous, add a final step: "Flag ambiguity: <short note>".
 - Return ONLY JSON. No preamble or code fences.
-
+-For each test case, also include a field "source_excerpt" containing the most relevant sentence or paragraph from the requirement that this test validates.
 Now process this requirement:
 REQ-ID: {{req_id}}
 TEXT: {{requirement_text}}
