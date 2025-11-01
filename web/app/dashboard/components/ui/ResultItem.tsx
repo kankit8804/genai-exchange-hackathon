@@ -11,6 +11,7 @@ interface TestCase {
   expected_result: string;
   steps: string[];
   trace_link?: string;
+  createdAt?: string | number | Date;
 }
 
 interface JiraResponse {
@@ -45,6 +46,16 @@ export function ResultItem({ tc, post, apiBase }: Props) {
     }
   };
 
+    const formattedDate = tc.createdAt
+    ? new Date(tc.createdAt).toLocaleString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : null;
+
   return (
     <li className="rounded-lg border border-slate-200 bg-white p-4">
       <div className="flex items-start gap-3">
@@ -56,6 +67,11 @@ export function ResultItem({ tc, post, apiBase }: Props) {
           <div className="mt-1 text-[12px] text-slate-500">
             Test: {tc.test_id} • REQ: {tc.req_id}
           </div>
+           {formattedDate && (
+            <div className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1">
+              <span>Created: {formattedDate}</span>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-2">

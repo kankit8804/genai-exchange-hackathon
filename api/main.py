@@ -434,7 +434,7 @@ def get_testcases_by_project(project_id: str):
                 "severity": row["severity"],
                 "expected_result": row["expected_result"],
                 "steps": row["steps"],
-                "created_at": row["created_at"],
+                "createdAt": row["created_at"],
                 "project_id": row["project_id"],
                 "source_excerpt": row["source_excerpt"],
             })

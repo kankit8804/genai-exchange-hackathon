@@ -63,7 +63,14 @@ export default function Dashboard() {
 
 
   useEffect(() => {
-    if (!projectId) return;
+    if (!projectId) {
+
+      setTestCases([]);
+      setSummary("No project selected.");
+      setHasStoredCases(false);
+      setLoadingStoredCases(false);
+      return;
+    }
 
     const fetchData = async () => {
       try {
@@ -155,7 +162,7 @@ export default function Dashboard() {
 
       setSummary(data.summary ?? "Generated successfully!");
 
-      showNotification("Generated successfully!");
+
 
       if (projectId) {
         const refreshed: any = await fetchTestCasesByProject(projectId);
@@ -168,6 +175,7 @@ export default function Dashboard() {
               : [];
 
         setTestCases(list);
+        showNotification("Generated successfully!");
       }
     } catch (err) {
       console.error("Error generating:", err);
@@ -407,7 +415,7 @@ export default function Dashboard() {
           <div className="bottom-3 right-4">
             <PrimaryButton
               onClick={handleGenerate}
-              loading={loading}
+              loading={loadingGen}
               label="Generate Test Cases"
               loadingLabel="Generating..."
             />
@@ -417,7 +425,16 @@ export default function Dashboard() {
         {/* Right column (compact until results; grows when they exist) */}
         <aside className="space-y-6 lg:sticky lg:top-24 self-start">
           <Card className={hasResults ? "overflow-hidden" : ""}>
-            <CardHeader title="Results" subtitle={summary} />
+            <CardHeader
+              title="Results"
+              subtitle={
+                !loadingStoredCases && hasResults
+                  ? `(${sorted.length}) ${summary ?? ""}`
+                  : summary
+              }
+            />
+
+
 
             <div className="mt-3 flex gap-2">
               <ButtonGhost onClick={downloadJSON}>Download JSON</ButtonGhost>

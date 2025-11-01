@@ -15,6 +15,8 @@ import { db } from "@/lib/firebase/initFirebase";
 import { useNotificationStore } from "@/app/store/notificationStore";
 import { Card, ResultItem, EmptyState } from "@/app/dashboard/components/ui";
 import { fetchTestCasesByProject, useTestStore } from "@/app/store/testCaseStore";
+import TestcaseHeader from "../components/testCaseHeader";
+import AddTestCaseModal from "../components/addTestCaseWidget";
 
 interface TestCase {
     req_id: string;
@@ -25,6 +27,7 @@ interface TestCase {
     steps: string[];
     isPushed?: boolean;
     isRemoved?: boolean;
+    createdAt?: string | number | Date;
 }
 
 interface Project {
@@ -60,6 +63,7 @@ export default function ViewAllPage() {
     const [selectedProject, setSelectedProject] = useState<string | null>(null);
     const [loadingStoredCases, setLoadingStoredCases] = useState(false);
     const { showNotification } = useNotificationStore();
+    const [showModal, setShowModal] = useState(false);
 
 
     const fetchProjects = async () => {
@@ -125,7 +129,7 @@ export default function ViewAllPage() {
 
             setTestCases(list);
         } catch (err) {
-            console.error("❌ Failed to fetch existing test cases:", err);
+            console.error("Failed to fetch existing test cases:", err);
         } finally {
             setLoadingStoredCases(false);
         }
@@ -184,12 +188,12 @@ export default function ViewAllPage() {
             <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
                 <span
                     className={`${title === "Generated"
-                            ? "text-emerald-600"
-                            : title === "Pushed"
-                                ? "text-blue-600"
-                                : title === "Removed"
-                                    ? "text-red-600"
-                                    : "text-slate-700"
+                        ? "text-emerald-600"
+                        : title === "Pushed"
+                            ? "text-blue-600"
+                            : title === "Removed"
+                                ? "text-red-600"
+                                : "text-slate-700"
                         }`}
                 >
                     {title}
@@ -225,8 +229,8 @@ export default function ViewAllPage() {
                                                     : dragProvided.draggableProps.style?.transform,
                                             }}
                                             className={`transition-all duration-150 ${snapshot.isDragging
-                                                    ? "scale-[1.02] shadow-2xl cursor-grabbing"
-                                                    : "cursor-grab"
+                                                ? "scale-[1.02] shadow-2xl cursor-grabbing"
+                                                : "cursor-grab"
                                                 }`}
                                         >
                                             <div className={snapshot.isDragging ? "bg-white rounded-md" : ""}>
@@ -250,13 +254,21 @@ export default function ViewAllPage() {
             </Droppable>
 
             {showAdd && (
-                <button
-                    onClick={() => console.log("Add Test Case clicked")}
-                    className="mt-4 w-full rounded-md bg-emerald-600 text-white text-sm font-medium py-2 hover:bg-emerald-700 transition-colors"
-                >
-                    + Add Test Case
-                </button>
+                <>
+                    <button
+                        onClick={() => setShowModal(true)}
+                        className="mt-4 w-full rounded-md bg-emerald-600 text-white text-sm font-medium py-2 hover:bg-emerald-700 transition-colors"
+                    >
+                        + Add Test Case
+                    </button>
+
+                    <AddTestCaseModal
+                        open={showModal}
+                        onClose={() => setShowModal(false)}
+                    />
+                </>
             )}
+
         </div>
     );
 
@@ -287,22 +299,11 @@ export default function ViewAllPage() {
             <div className="w-full max-w-7xl mx-auto flex flex-col flex-1">
                 {/* Header */}
                 <div className="flex justify-between items-center mb-8">
-                    <div className="flex items-center gap-4">
-                        <h1 className="text-2xl font-semibold">All Test Cases</h1>
-                        {projects.length > 0 && (
-                            <select
-                                value={selectedProject ?? ""}
-                                onChange={(e) => setSelectedProject(e.target.value)}
-                                className="rounded-md border border-gray-300 bg-white text-sm px-3 py-2 focus:outline-none"
-                            >
-                                {projects.map((p) => (
-                                    <option key={p.id} value={p.id}>
-                                        {p.projectName}
-                                    </option>
-                                ))}
-                            </select>
-                        )}
-                    </div>
+                    <TestcaseHeader
+                        projects={projects}
+                        selectedProject={selectedProject}
+                        setSelectedProject={setSelectedProject}
+                    />
 
                     <div className="flex items-center gap-2 flex-1 max-w-md ml-auto">
                         <input

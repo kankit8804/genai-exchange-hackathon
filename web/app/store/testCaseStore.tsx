@@ -12,6 +12,7 @@ export interface TestCase {
   isPushed?: boolean;
   isRemoved?: boolean;
   project_id: string;
+  createdAt?: string | number | Date;
 }
 
 interface TestStore {
