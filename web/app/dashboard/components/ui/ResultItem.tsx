@@ -140,7 +140,7 @@ export function ResultItem({ tc, post, apiBase, jira_project_key }: Props) {
               rel="noreferrer"
               className="text-xs text-emerald-700 hover:underline"
             >
-              View ↗
+              View Issue↗
             </a>
           )}
           <button

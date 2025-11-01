@@ -1,6 +1,6 @@
 import os, json, uuid, re, logging
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
@@ -497,7 +497,49 @@ def build_adf_description(summary: str, steps: list[str] | None = None, expected
 
     return adf
 
+def update_is_pushed_by_test_id(test_ids: Union[str, List[str]], is_pushed: bool):
+    """
+    Update the Is_pushed column in BigQuery for given test_id(s).
+    
+    Args:
+        test_ids: A single test_id string or a list of test_id strings.
+        is_pushed: Boolean value to set for the Is_pushed column.
+    """
+    client = get_bq()
+    table = TABLE_TC
 
+    # Normalize to list
+    if isinstance(test_ids, str):
+        test_ids = [test_ids]
+
+    if not test_ids:
+        raise HTTPException(400, "No test_id(s) provided for update.")
+
+    # Create safe IN clause
+    test_id_list = ", ".join([f"'{tid}'" for tid in test_ids])
+
+    query = f"""
+        UPDATE `{table}`
+        SET Is_pushed = @is_pushed
+        WHERE test_id IN ({test_id_list})
+    """
+
+    job_config = bigquery.QueryJobConfig(
+        query_parameters=[
+            bigquery.ScalarQueryParameter("is_pushed", "BOOL", is_pushed),
+        ]
+    )
+
+    try:
+        client.query(query, job_config=job_config).result()
+    except Exception as e:
+        raise HTTPException(500, f"BigQuery update failed: {e}")
+
+    return {
+        "updated_test_ids": test_ids,
+        "is_pushed": is_pushed,
+        "updated_count": len(test_ids),
+    }
 
 @app.post("/push/jira")
 def push_jira(body: PushBody):
@@ -537,5 +579,7 @@ def push_jira(body: PushBody):
     data = r.json()
     issue_key = data.get("key")
     issue_url = f"https://{jira_domain}/browse/{issue_key}"
+
+    update_is_pushed_by_test_id(body.test_id, True)
 
     return {"ok": True, "external_key": issue_key, "external_url": issue_url}
