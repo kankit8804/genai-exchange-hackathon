@@ -1,0 +1,90 @@
+name: Deploy Web to Cloud Run
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'web/**'
+      - '.github/workflows/deploy-web.yml'
+  workflow_dispatch:
+
+env:
+  PROJECT_ID: orbit-ai-472708
+  SERVICE_NAME: orbit-web
+  REGION: us-central1
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Get Firebase secrets
+        id: secrets
+        run: |
+          echo "FIREBASE_API_KEY=$(gcloud secrets versions access latest --secret=NEXT_PUBLIC_FIREBASE_API_KEY --project=${{ env.PROJECT_ID }})" >> $GITHUB_OUTPUT
+          echo "FIREBASE_AUTH_DOMAIN=$(gcloud secrets versions access latest --secret=NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN --project=${{ env.PROJECT_ID }})" >> $GITHUB_OUTPUT
+          echo "FIREBASE_PROJECT_ID=$(gcloud secrets versions access latest --secret=NEXT_PUBLIC_FIREBASE_PROJECT_ID --project=${{ env.PROJECT_ID }})" >> $GITHUB_OUTPUT
+          echo "FIREBASE_STORAGE_BUCKET=$(gcloud secrets versions access latest --secret=NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET --project=${{ env.PROJECT_ID }})" >> $GITHUB_OUTPUT
+          echo "FIREBASE_MESSAGING_SENDER_ID=$(gcloud secrets versions access latest --secret=NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID --project=${{ env.PROJECT_ID }})" >> $GITHUB_OUTPUT
+          echo "FIREBASE_APP_ID=$(gcloud secrets versions access latest --secret=NEXT_PUBLIC_FIREBASE_APP_ID --project=${{ env.PROJECT_ID }})" >> $GITHUB_OUTPUT
+          echo "FIREBASE_MEASUREMENT_ID=$(gcloud secrets versions access latest --secret=NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID --project=${{ env.PROJECT_ID }})" >> $GITHUB_OUTPUT
+          echo "API_BASE_URL=$(gcloud secrets versions access latest --secret=NEXT_PUBLIC_API_BASE_URL --project=${{ env.PROJECT_ID }})" >> $GITHUB_OUTPUT
+
+      - name: Configure Docker for GCR
+        run: gcloud auth configure-docker
+
+      - name: Build Docker image
+        run: |
+          docker build -t gcr.io/${{ env.PROJECT_ID }}/${{ env.SERVICE_NAME }}:${{ github.sha }} \
+            -t gcr.io/${{ env.PROJECT_ID }}/${{ env.SERVICE_NAME }}:latest \
+            -f web/Dockerfile \
+            --build-arg NEXT_PUBLIC_FIREBASE_API_KEY="${{ steps.secrets.outputs.FIREBASE_API_KEY }}" \
+            --build-arg NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN="${{ steps.secrets.outputs.FIREBASE_AUTH_DOMAIN }}" \
+            --build-arg NEXT_PUBLIC_FIREBASE_PROJECT_ID="${{ steps.secrets.outputs.FIREBASE_PROJECT_ID }}" \
+            --build-arg NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET="${{ steps.secrets.outputs.FIREBASE_STORAGE_BUCKET }}" \
+            --build-arg NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID="${{ steps.secrets.outputs.FIREBASE_MESSAGING_SENDER_ID }}" \
+            --build-arg NEXT_PUBLIC_FIREBASE_APP_ID="${{ steps.secrets.outputs.FIREBASE_APP_ID }}" \
+            --build-arg NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID="${{ steps.secrets.outputs.FIREBASE_MEASUREMENT_ID }}" \
+            --build-arg NEXT_PUBLIC_API_BASE_URL="${{ steps.secrets.outputs.API_BASE_URL }}" \
+            ./web
+
+      - name: Push Docker image
+        run: |
+          docker push gcr.io/${{ env.PROJECT_ID }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
+          docker push gcr.io/${{ env.PROJECT_ID }}/${{ env.SERVICE_NAME }}:latest
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy ${{ env.SERVICE_NAME }} \
+            --image gcr.io/${{ env.PROJECT_ID }}/${{ env.SERVICE_NAME }}:${{ github.sha }} \
+            --region ${{ env.REGION }} \
+            --platform managed \
+            --allow-unauthenticated \
+            --memory 1Gi \
+            --cpu 1 \
+            --timeout 300 \
+            --max-instances 10
+
+      - name: Show deployment URL
+        run: |
+          echo "Web app deployed to:"
+          gcloud run services describe ${{ env.SERVICE_NAME }} \
+            --region ${{ env.REGION }} \
+            --format 'value(status.url)'
