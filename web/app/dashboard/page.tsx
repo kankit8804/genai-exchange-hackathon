@@ -13,6 +13,7 @@ import { fetchTestCasesByProject } from "@/app/store/testCaseStore";
 import { useNotificationStore } from "@/app/store/notificationStore";
 import ShareProjectModal from "@/app/dashboard/components/ShareProjectModal";
 import ALMIntegration from "@/app/dashboard/components/ALMIntegration";
+import PushAllToJira from "@/app/dashboard/components/PushAllToJira";
 
 /* ========= Types ========= */
 interface TestCase {
@@ -56,12 +57,13 @@ export default function Dashboard() {
   const projectName = searchParams.get("projectName");
   const pDescription = searchParams.get("description");
   const projectId = searchParams.get("projectId");
+  const integrationType = searchParams.get("integrationType");
   const [hasStoredCases, setHasStoredCases] = useState(false);
   const [loadingStoredCases, setLoadingStoredCases] = useState(false);
-  const jiraProjoctKey = searchParams.get("jiraProjectKey");
+  const jiraProjectKey = searchParams.get("jiraProjectKey");
 
   console.log(
-    `Project Name:${projectName}, Description${pDescription}, ProjecctId:${projectId}, jiraProjectKey:${jiraProjoctKey}`
+    `Project Name:${projectName}, Description${pDescription}, ProjecctId:${projectId}, jiraProjectKey:${jiraProjectKey}, integrationType:${integrationType}`
   );
 
   useEffect(() => {
@@ -425,7 +427,8 @@ export default function Dashboard() {
                       tc={tc}
                       post={post}
                       apiBase={API_BASE}
-                      jira_project_key={jiraProjoctKey}
+                      jira_project_key={jiraProjectKey}
+                      integration_Type={integrationType}
                     />
                   ))}
                 </ul>
@@ -436,7 +439,22 @@ export default function Dashboard() {
           </Card>
 
           {/* NEW: ALM Integration card placed directly under Results */}
-          <ALMIntegration testCases={sorted} />
+          {hasResults ? (
+            <>
+              {integrationType === "Azure" && (
+                <ALMIntegration testCases={sorted} />
+              )}
+
+              {integrationType === "Jira" && (
+                <PushAllToJira
+                  testCases={sorted}
+                  apiBase={API_BASE}
+                  jira_project_key={jiraProjectKey}
+                />
+              )}
+            </>
+          ) : null}
+
 
           {/* Single pro tip (kept) */}
           <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">
