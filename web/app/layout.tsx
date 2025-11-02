@@ -35,7 +35,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         {/* Expose API base (optional) */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `window.API_BASE="${"http://127.0.0.1:8000"}";`,
+            __html: `window.API_BASE="${"https://orbit-api-938180057345.us-central1.run.app"}";`,
           }}
         />
       </body>

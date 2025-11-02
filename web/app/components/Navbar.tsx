@@ -14,14 +14,12 @@ export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
 
- 
+
 
   const logout = async () => {
     await auth.signOut();
     router.replace("/login");
   };
-
-  if (["/login", "/signup", "/forgot"].includes(pathname)) return null;
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -80,14 +78,16 @@ export default function Navbar() {
 
                 {/* Dropdown */}
                 <div
-                  className={`absolute right-0 mt-3 w-52 rounded-xl border border-slate-200 bg-white/80 backdrop-blur-md shadow-xl transition-all duration-200 origin-top-right transform ${
-                    open
+                  className={`absolute right-0 mt-3 w-52 z-[9999] rounded-xl border border-slate-200 bg-white shadow-xl transition-all duration-200 origin-top-right transform ${open
                       ? "scale-100 opacity-100 translate-y-0"
                       : "scale-95 opacity-0 -translate-y-2 pointer-events-none"
-                  }`}
+                    }`}
+                  style={{ position: "fixed" }}
                 >
+
                   {/* Arrow */}
-                  <div className="absolute -top-2 right-4 w-3 h-3 bg-white/90 border-l border-t border-slate-200 rotate-45"></div>
+                  <div className="absolute -top-2 right-4 w-3 h-3 bg-white border-l border-t border-slate-200 rotate-45 z-[9999]"></div>
+
 
                   <div className="flex flex-col py-2 text-sm text-slate-700">
                     <button

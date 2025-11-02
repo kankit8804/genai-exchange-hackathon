@@ -73,10 +73,10 @@ export default function HomePage() {
               </p>
               <div className="mt-6 flex flex-wrap gap-3">
                 <Link
-                  href="/dashboard"
+                  href="/project"
                   className="rounded-lg bg-emerald-600 px-5 py-3 text-white font-medium shadow-sm hover:bg-emerald-700"
                 >
-                  Try the Generator
+                  Create new project 
                 </Link>
                 <a
                   href="#how-it-works"
@@ -174,10 +174,10 @@ export default function HomePage() {
               </div>
             </div>
             <Link
-              href="/dashboard"
+              href="/project"
               className="rounded-md bg-emerald-600 px-4 py-2 text-white font-medium hover:bg-emerald-700"
             >
-              Open Dashboard
+              Show my projects
             </Link>
           </div>
         </div>
