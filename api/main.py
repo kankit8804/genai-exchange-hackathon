@@ -7,6 +7,7 @@ from firebase_admin import auth as fb_auth
 from firebase_utils import get_firestore_client
 from firebase_admin import firestore 
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 import os
 from pydantic import BaseModel
 from typing import Dict, Any
@@ -76,11 +77,17 @@ app = FastAPI(title="Orbit AI Test Case Generator API", version="0.4")
 allowed_origins_env = os.getenv("WEB_ALLOWED_ORIGINS", "").strip()
 allowed_origin_regex_env = os.getenv("WEB_ALLOWED_ORIGIN_REGEX", "").strip()
 
-if allowed_origins_env:
-    origins_list = [o.strip() for o in allowed_origins_env.split(",") if o.strip()]
+# default: allow Cloud Run web previews and local dev
+default_regex = r"^https://orbit-web-.*\.a\.run\.app$|^https://orbit-web-.*\.run\.app$|^http://(localhost|127\.0\.0\.1):3000$"
+
+# Keep parsed allowlist handy for custom middleware
+_origin_list = [o.strip() for o in allowed_origins_env.split(",") if o.strip()] if allowed_origins_env else []
+_origin_pattern = re.compile(allowed_origin_regex_env or default_regex)
+
+if _origin_list:
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=origins_list,
+        allow_origins=_origin_list,
         allow_methods=["*"],
         allow_headers=["*"],
         allow_credentials=False,
@@ -88,8 +95,6 @@ if allowed_origins_env:
         max_age=3600,
     )
 else:
-    # default: allow Cloud Run web previews and local dev
-    default_regex = r"^https://orbit-web-.*\.a\.run\.app$|^https://orbit-web-.*\.run\.app$|^http://(localhost|127\.0\.0\.1):3000$"
     app.add_middleware(
         CORSMiddleware,
         allow_origin_regex=allowed_origin_regex_env or default_regex,
@@ -99,6 +104,40 @@ else:
         expose_headers=["*"],
         max_age=3600,
     )
+
+
+class EnsureCORSOnError(BaseHTTPMiddleware):
+    """Ensure Access-Control-Allow-* headers are present even on 4xx/5xx.
+
+    Some server-side exceptions can produce responses that miss CORS headers.
+    This middleware adds the headers when the request Origin is allowed by
+    either the explicit allowlist or the configured regex.
+    """
+
+    async def dispatch(self, request, call_next):
+        origin = request.headers.get("origin")
+        try:
+            response = await call_next(request)
+        except Exception as e:
+            # Fallback JSON error with 500 while preserving CORS below
+            from fastapi.responses import JSONResponse
+            log.exception(f"Unhandled error: {e}")
+            response = JSONResponse({"detail": "Internal Server Error"}, status_code=500)
+
+        # Attach CORS headers if origin matches our policy
+        if origin:
+            allowed = (origin in _origin_list) or (_origin_pattern.match(origin) is not None)
+            if allowed:
+                # Mirror allowed origin; also set basic allow headers to unblock browsers
+                response.headers.setdefault("Access-Control-Allow-Origin", origin)
+                response.headers.setdefault("Vary", "Origin")
+                response.headers.setdefault("Access-Control-Allow-Methods", "*")
+                response.headers.setdefault("Access-Control-Allow-Headers", "*")
+        return response
+
+
+# Add as the outermost middleware so it wraps all responses
+app.add_middleware(EnsureCORSOnError)
 
 # -------------------- Helpers --------------------
 def load_prompt() -> str:
