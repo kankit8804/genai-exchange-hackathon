@@ -61,7 +61,6 @@ jobs:
             --platform managed \
             --allow-unauthenticated \
             --set-env-vars="PROJECT_ID=${{ env.PROJECT_ID }}" \
-            --set-secrets="FIREBASE_SERVICE_ACCOUNT=FIREBASE_SERVICE_ACCOUNT:latest" \
             --memory 1Gi \
             --cpu 1 \
             --timeout 300 \
