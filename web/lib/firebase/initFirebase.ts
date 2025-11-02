@@ -20,7 +20,10 @@ const firebaseConfig = {
 // During Cloud Build (prerender) these NEXT_PUBLIC_* build args may be empty which
 // causes firebase to throw (invalid-api-key). Guarding prevents prerender errors.
 const isClient = typeof window !== "undefined";
-const hasClientConfig = Boolean(process.env.NEXT_PUBLIC_FIREBASE_API_KEY);
+const hasClientConfig = Boolean(
+  process.env.NEXT_PUBLIC_FIREBASE_API_KEY &&
+  process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
+);
 
 let app: ReturnType<typeof initializeApp> | undefined;
 if (isClient && hasClientConfig) {
@@ -30,8 +33,14 @@ if (isClient && hasClientConfig) {
     // initialization can occasionally throw if environment is unusual; log and continue
     // so build/prerender won't fail.
     // eslint-disable-next-line no-console
-    console.warn("[client firebase] initializeApp failed:", e);
+    console.error("[client firebase] initializeApp failed:", e);
+    console.error("[client firebase] Config check - API Key exists:", Boolean(process.env.NEXT_PUBLIC_FIREBASE_API_KEY));
+    console.error("[client firebase] Config check - Project ID exists:", Boolean(process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID));
   }
+} else if (isClient && !hasClientConfig) {
+  console.error("[client firebase] Missing required Firebase environment variables!");
+  console.error("NEXT_PUBLIC_FIREBASE_API_KEY:", process.env.NEXT_PUBLIC_FIREBASE_API_KEY ? "Set" : "Missing");
+  console.error("NEXT_PUBLIC_FIREBASE_PROJECT_ID:", process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ? "Set" : "Missing");
 }
 
 // Export nullable instances — callers should only use these on the client at runtime.
