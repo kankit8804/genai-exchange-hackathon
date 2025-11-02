@@ -61,7 +61,7 @@ jobs:
             --platform managed \
             --allow-unauthenticated \
             --set-env-vars="PROJECT_ID=${{ env.PROJECT_ID }}" \
-            --set-secrets="GEMINI_API_KEY=GEMINI_API_KEY:latest,FIREBASE_SERVICE_ACCOUNT_KEY=FIREBASE_SERVICE_ACCOUNT_KEY:latest" \
+            --set-secrets="FIREBASE_SERVICE_ACCOUNT=FIREBASE_SERVICE_ACCOUNT:latest" \
             --memory 1Gi \
             --cpu 1 \
             --timeout 300 \
