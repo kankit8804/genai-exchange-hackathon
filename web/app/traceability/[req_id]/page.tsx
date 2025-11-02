@@ -2,6 +2,7 @@
 export const dynamic = "force-dynamic";
 
 import { useEffect, useState } from "react";
+import { getApiBase } from "@/utils/api";
 import { useParams } from "next/navigation";
 
 interface Test {
@@ -25,7 +26,8 @@ export default function TraceabilityPage() {
 
   useEffect(() => {
     if (!req_id) return;
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/traceability/${req_id}`)
+    const base = getApiBase();
+    fetch(`${base}/api/traceability/${req_id}`)
       .then((res) => (res.ok ? res.json() : Promise.reject(res.statusText)))
       .then(setData)
       .catch((err) => setError(String(err)));

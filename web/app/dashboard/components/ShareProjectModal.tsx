@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { getApiBase } from "@/utils/api";
 
 export default function ShareProjectModal({
   projectId,
@@ -11,7 +12,7 @@ export default function ShareProjectModal({
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const API = process.env.NEXT_PUBLIC_API_URL || "https://orbit-api-938180057345.us-central1.run.app";
+  const API = getApiBase();
 
   const fetchMembers = async () => {
     const res = await fetch(`${API}/projects/${projectId}/members`);
