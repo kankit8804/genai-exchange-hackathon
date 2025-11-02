@@ -11,7 +11,7 @@ interface Project {
   id: string;
   projectName: string;
   description: string;
-  jiraProject?: string;
+  jiraProjectId ?: string;
   integrationType: string;
   createdAt?: string;
   role?: string;
@@ -80,7 +80,7 @@ export default function ProjectPage() {
             id: project.id,
             projectName: project.projectName,
             description: project.description,
-            jiraProject: project.jiraProject,
+            jiraProjectId : project.jiraProjectId ,
             integrationType: project.integrationType,
             createdAt: project.createdAt
               ? new Date(project.createdAt.seconds * 1000).toLocaleString()
@@ -145,7 +145,7 @@ export default function ProjectPage() {
                     )}&description=${encodeURIComponent(
                       p.description
                     )}&jiraProjectKey=${encodeURIComponent(
-                      p.jiraProject || "KAN"
+                      p.jiraProjectId  || "KAN"
                     )}&integrationType=${encodeURIComponent(p.integrationType)}`
                   )
                 }

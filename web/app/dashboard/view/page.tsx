@@ -34,8 +34,9 @@ interface Project {
     id: string;
     projectName: string;
     description: string;
-    jiraProject?: string;
+    jiraProjectId ?: string;
     createdAt: string;
+    integrationType: string;
 }
 
 const API_BASE = "http://127.0.0.1:8000";
@@ -61,10 +62,12 @@ function ViewAllPageInner() {
     const [searchText, setSearchText] = useState("");
     const [projects, setProjects] = useState<Project[]>([]);
     const [selectedProject, setSelectedProject] = useState<string | null>(null);
+    const [intergationType, setIntergationType] = useState<string | null>(null);
     const [loadingStoredCases, setLoadingStoredCases] = useState(false);
     const { showNotification } = useNotificationStore();
     const [showModal, setShowModal] = useState(false);
     const [addingStatus, setAddingStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+    const [jiraProjectKey, setJiraProjectKey] = useState<string | null>(null);
 
 
     const fetchProjects = async () => {
@@ -81,15 +84,19 @@ function ViewAllPageInner() {
             const snapshot = await getDocs(q);
             const data: Project[] = snapshot.docs.map((doc) => {
                 const project = doc.data() as any;
+                                 console.log("Rendering project.jiraProjectId :",project.jiraProjectId );
+                                            console.log("projectName :",project.projectName);
                 return {
                     id: doc.id,
                     projectName: project.projectName,
                     description: project.description,
-                    jiraProject: project.jiraProject,
+                    jiraProjectId : project.jiraProjectId ,
+                    integrationType: project.integrationType,
                     createdAt: project.createdAt
                         ? new Date(project.createdAt.seconds * 1000).toLocaleString()
                         : "N/A",
                 };
+
             });
 
             setProjects(data);
@@ -97,6 +104,7 @@ function ViewAllPageInner() {
 
             if (data.length > 0 && !selectedProject && !isFromDashboard) {
                 setSelectedProject(data[0].id);
+                setIntergationType(data[0].integrationType);
             }
         } catch (err) {
             console.error("Error fetching projects:", err);
@@ -104,11 +112,11 @@ function ViewAllPageInner() {
     };
 
 
-    const fetchData = async (projectId: string) => {
+    const fetchData = async (projectId: string, skipCheck: boolean = false) => {
         try {
-
             const currentProjectId = testCases[0]?.project_id;
-            if (currentProjectId && currentProjectId === projectId) {
+
+            if (!skipCheck && currentProjectId && currentProjectId === projectId) {
                 console.log("Skipping fetch — same project selected:", projectId);
                 return;
             }
@@ -118,14 +126,16 @@ function ViewAllPageInner() {
 
             const existing: any = await fetchTestCasesByProject(projectId);
 
-
             const list = Array.isArray(existing)
                 ? existing
                 : Array.isArray(existing?.test_cases)
                     ? existing.test_cases
                     : [];
+
             if (list.length > 0) {
-                showNotification(`Loaded ${list.length} previously generated test case${list.length > 1 ? "s" : ""}.`);
+                showNotification(
+                    `Loaded ${list.length} previously generated test case${list.length > 1 ? "s" : ""}.`
+                );
             }
 
             setTestCases(list);
@@ -135,7 +145,6 @@ function ViewAllPageInner() {
             setLoadingStoredCases(false);
         }
     };
-
 
     useEffect(() => {
         if (user?.uid) fetchProjects();
@@ -157,6 +166,19 @@ function ViewAllPageInner() {
             fetchData(selectedProject);
         }
     }, [selectedProject]);
+
+    useEffect(() => {
+         console.log("Rendering integration_Type:",intergationType);
+                                            console.log("Rendering jira_project_key:",jiraProjectKey);
+        if (selectedProject && projects.length > 0) {
+            const project = projects.find((p) => p.id === selectedProject);
+            if (project) {
+                setIntergationType(prev => prev || project.integrationType || null);
+                setJiraProjectKey(prev => prev || project.jiraProjectId  || null);
+            }
+        }
+    }, [selectedProject, projects]);
+
 
     const handleDragEnd = (result: any) => {
         const { source, destination, draggableId } = result;
@@ -188,7 +210,7 @@ function ViewAllPageInner() {
         try {
             setAddingStatus("loading");
             const payload = { ...data, project_id: selectedProject };
-            const response = await post<{ test_id: string , req_id: string, createdAt: string}>(`${API_BASE}/manual/testcase`, payload);
+            const response = await post<{ test_id: string, req_id: string, createdAt: string }>(`${API_BASE}/manual/testcase`, payload);
 
             if (response?.test_id) {
                 showNotification(`Test ID: ${response.test_id} created successfully!`);
@@ -314,6 +336,11 @@ function ViewAllPageInner() {
                                                     tc={tc}
                                                     post={post}
                                                     apiBase={API_BASE}
+                                                    onUpdated={() => {
+                                                        if (selectedProject) fetchData(selectedProject, true);
+                                                    }}
+                                                    jira_project_key={jiraProjectKey}
+                                                    integration_Type={intergationType}
                                                 />
                                             </div>
                                         </div>
