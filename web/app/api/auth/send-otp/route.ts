@@ -2,7 +2,7 @@
 export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
-import { adminAuth, adminDb } from "@/lib/firebase/admin";
+import { getAdminAuth, getAdminDb } from "@/lib/firebase/admin";
 import crypto from "crypto";
 import { sendMail } from "@/lib/firebase/email";
 
@@ -18,6 +18,7 @@ export async function POST(req: Request) {
 
     // Ensure user exists
     try {
+      const adminAuth = getAdminAuth();
       await adminAuth.getUserByEmail(clean);
     } catch {
       return NextResponse.json({ error: "not_found" }, { status: 404 });
@@ -27,7 +28,8 @@ export async function POST(req: Request) {
     const token = crypto.randomBytes(20).toString("hex");
     const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
 
-    await adminDb.collection("pw_otps").doc(token).set({
+  const adminDb = getAdminDb();
+  await adminDb.collection("pw_otps").doc(token).set({
       email: clean,
       code,
       expiresAt,
