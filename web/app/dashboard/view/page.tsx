@@ -40,7 +40,7 @@ interface Project {
     integrationType: string;
 }
 
-const API_BASE = "http://127.0.0.1:8000";
+const API_BASE = "https://orbit-api-938180057345.us-central1.run.app";
 
 const post = async <T,>(url: string, payload?: object): Promise<T> => {
     const res = await fetch(url, {

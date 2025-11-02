@@ -11,7 +11,7 @@ export default function ShareProjectModal({
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const API = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+  const API = process.env.NEXT_PUBLIC_API_URL || "https://orbit-api-938180057345.us-central1.run.app";
 
   const fetchMembers = async () => {
     const res = await fetch(`${API}/projects/${projectId}/members`);

@@ -51,7 +51,7 @@ function DashboardInner() {
 
   const [summary, setSummary] = useState("No results yet.");
 
-  const API_BASE = "http://127.0.0.1:8000";
+  const API_BASE = "https://orbit-api-938180057345.us-central1.run.app";
 
   const searchParams = useSearchParams();
   const projectName = searchParams.get("projectName");
