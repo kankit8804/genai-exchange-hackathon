@@ -44,13 +44,13 @@ images:
 # Replace PROJECT_ID in the resource paths below with your GCP project id.
 secrets:
   - secretEnv:
-  _NEXT_PUBLIC_FIREBASE_API_KEY: "projects/orbit-ai-472708/secrets/NEXT_PUBLIC_FIREBASE_API_KEY/versions/latest"
-  _NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: "projects/orbit-ai-472708/secrets/NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN/versions/latest"
-  _NEXT_PUBLIC_FIREBASE_PROJECT_ID: "projects/orbit-ai-472708/secrets/NEXT_PUBLIC_FIREBASE_PROJECT_ID/versions/latest"
-  _NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: "projects/orbit-ai-472708/secrets/NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET/versions/latest"
-  _NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: "projects/orbit-ai-472708/secrets/NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID/versions/latest"
-  _NEXT_PUBLIC_FIREBASE_APP_ID: "projects/orbit-ai-472708/secrets/NEXT_PUBLIC_FIREBASE_APP_ID/versions/latest"
-  _NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID: "projects/orbit-ai-472708/secrets/NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID/versions/latest"
+      _NEXT_PUBLIC_FIREBASE_API_KEY: "projects/orbit-ai-472708/secrets/NEXT_PUBLIC_FIREBASE_API_KEY/versions/latest"
+      _NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: "projects/orbit-ai-472708/secrets/NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN/versions/latest"
+      _NEXT_PUBLIC_FIREBASE_PROJECT_ID: "projects/orbit-ai-472708/secrets/NEXT_PUBLIC_FIREBASE_PROJECT_ID/versions/latest"
+      _NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: "projects/orbit-ai-472708/secrets/NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET/versions/latest"
+      _NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: "projects/orbit-ai-472708/secrets/NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID/versions/latest"
+      _NEXT_PUBLIC_FIREBASE_APP_ID: "projects/orbit-ai-472708/secrets/NEXT_PUBLIC_FIREBASE_APP_ID/versions/latest"
+      _NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID: "projects/orbit-ai-472708/secrets/NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID/versions/latest"
 
 options:
   machineType: "E2_HIGHCPU_8"  # optional - speeds up builds
