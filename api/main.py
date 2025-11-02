@@ -7,6 +7,7 @@ from firebase_admin import auth as fb_auth
 from firebase_utils import get_firestore_client
 from firebase_admin import firestore 
 from fastapi.middleware.cors import CORSMiddleware
+import os
 from pydantic import BaseModel
 from typing import Dict, Any
 import traceability
@@ -71,20 +72,33 @@ def ensure_vertex():
 # -------------------- FastAPI --------------------
 app = FastAPI(title="Orbit AI Test Case Generator API", version="0.4")
 
-# Explicit CORS allowlist: Cloud Run web and common local dev origins.
-ALLOWED_ORIGINS = [
-    "https://orbit-web-938180057345.us-central1.run.app",
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-]
+# CORS allowlist via env (comma-separated exact origins) or a regex fallback that matches Cloud Run preview domains
+allowed_origins_env = os.getenv("WEB_ALLOWED_ORIGINS", "").strip()
+allowed_origin_regex_env = os.getenv("WEB_ALLOWED_ORIGIN_REGEX", "").strip()
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
-    allow_methods=["*"],
-    allow_headers=["*"],
-    allow_credentials=False,
-)
+if allowed_origins_env:
+    origins_list = [o.strip() for o in allowed_origins_env.split(",") if o.strip()]
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=origins_list,
+        allow_methods=["*"],
+        allow_headers=["*"],
+        allow_credentials=False,
+        expose_headers=["*"],
+        max_age=3600,
+    )
+else:
+    # default: allow Cloud Run web previews and local dev
+    default_regex = r"^https://orbit-web-.*\.a\.run\.app$|^https://orbit-web-.*\.run\.app$|^http://(localhost|127\.0\.0\.1):3000$"
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origin_regex=allowed_origin_regex_env or default_regex,
+        allow_methods=["*"],
+        allow_headers=["*"],
+        allow_credentials=False,
+        expose_headers=["*"],
+        max_age=3600,
+    )
 
 # -------------------- Helpers --------------------
 def load_prompt() -> str:
