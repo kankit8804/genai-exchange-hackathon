@@ -188,53 +188,39 @@ const handleSaveEdit = async () => {
         </div>
 
         <div className="flex items-center gap-2">
-        {integration_Type === "Jira" && jira_project_key ? (
-          <div className="flex items-center gap-2">
+          {/* Show button before push */}
+          {!pushing && !jiraLink && (
             <button
               onClick={pushToJira}
-              disabled={pushing}
-              className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs hover:bg-slate-50 disabled:opacity-60"
+              className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs hover:bg-slate-50"
             >
-              {pushing ? "Pushing…" : "Push to Jira"}
+              Push to Jira
             </button>
+          )}
 
-            {jiraLink && (
+          {/* Show progress while pushing */}
+          {pushing && !jiraLink && (
+            <span className="text-xs text-slate-500">Pushing…</span>
+          )}
+
+          {/* After successful push */}
+          {jiraLink && (
+            <>
+              <span className="text-xs text-emerald-700 font-medium">
+                Pushed ✓
+              </span>
               <a
                 href={jiraLink}
                 target="_blank"
                 rel="noreferrer"
                 className="text-xs text-emerald-700 hover:underline"
               >
-                View Issue ↗
+                View Issue↗
               </a>
-            )}
-          </div>
-        ) : null}
+            </>
+          )}
 
-        {integration_Type === "Azure" && jira_project_key ? (
-          <div className="flex items-center gap-2">
-            <button
-             // onClick={}
-              disabled={pushing}
-              className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs hover:bg-slate-50 disabled:opacity-60"
-            >
-              {pushing ? "Pushing…" : "Push to Azure"}
-            </button>
-
-            {jiraLink && (
-              <a
-                href={jiraLink}
-                target="_blank"
-                rel="noreferrer"
-                className="text-xs text-emerald-700 hover:underline"
-              >
-                View Issue ↗
-              </a>
-            )}
-          </div>
-        ) : null}
-
-
+          {/* Details toggle button */}
           <button
             onClick={() => setOpen((v) => !v)}
             className="text-xs text-slate-600 hover:underline"
