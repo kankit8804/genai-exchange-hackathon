@@ -552,7 +552,7 @@ def update_is_pushed_by_test_id(test_ids: Union[str, List[str]], is_pushed: bool
 
 @app.post("/push/jira")
 def push_jira(body: PushBody):
-
+    log.debug(f"Push to Jira called with: {body}")
     if not (body.jira_domain and body.jira_email and body.jira_api_token and body.jira_project_key):
         raise HTTPException(400, "Missing Jira credentials from request body")
 
@@ -563,7 +563,7 @@ def push_jira(body: PushBody):
         steps=body.steps or None,
         expected=None
     )
-
+    log.debug(f"Jira ADF: {adf}")
     url = f"https://{jira_domain}/rest/api/3/issue"
     payload = {
         "fields": {
@@ -628,6 +628,19 @@ async def create_manual_testcase(body: dict):
     except Exception as e:
         log.error(f"Manual test case creation failed: {e}")
         return {"ok": False, "error": str(e)}
+    
+@app.post("/push/jira/bulk")
+def push_jira_bulk(body: list[PushBody]):
+    results = []
+    for item in body:
+        try:
+            print(item)
+            result = push_jira(item)  # reuse your existing function
+            results.append({"test_id": item.test_id, "ok": True, "key": result["external_key"]})
+        except HTTPException as e:
+            results.append({"test_id": item.test_id, "ok": False, "error": str(e.detail)})
+    return {"results": results}
+
 
 
 

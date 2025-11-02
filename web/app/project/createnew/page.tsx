@@ -10,6 +10,7 @@ export default function NewProjectPage() {
   const [projectName, setProjectName] = useState("");
   const [jiraProject, setJiraProject] = useState("");
   const [description, setDescription] = useState("");
+  const [integrationType, setIntegrationType] = useState("Jira");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const [user] = useAuthState(auth);
@@ -25,12 +26,13 @@ export default function NewProjectPage() {
         projectName: projectName,
         jiraProjectId: jiraProject,
         description,
+        integrationType,
         createdAt: Timestamp.now(),
       });
 
       const newProjectId = docRef.id;
 
-      router.push(`/dashboard?projectName=${encodeURIComponent(projectName)}&description=${encodeURIComponent(description)}&projectId=${newProjectId}&jiraProjectKey=${encodeURIComponent(jiraProject)}`);
+      router.push(`/dashboard?projectName=${encodeURIComponent(projectName)}&description=${encodeURIComponent(description)}&projectId=${newProjectId}&jiraProjectKey=${encodeURIComponent(jiraProject)}&integrationType=${encodeURIComponent(integrationType)}`);
     } catch (error) {
       console.error("Error creating project:", error);
       alert("Something went wrong!");
@@ -60,6 +62,28 @@ export default function NewProjectPage() {
             />
           </div>
 
+          {/* Integration Type Radio Group */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              Integration Type
+            </label>
+            <div className="flex gap-6">
+              {["Jira", "Azure", "Polarion"].map((option) => (
+                <label key={option} className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="integrationType"
+                    value={option}
+                    checked={integrationType === option}
+                    onChange={() => setIntegrationType(option)}
+                    className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300"
+                  />
+                  <span className="text-sm text-slate-700">{option}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        {integrationType === "Jira" && (
           <div>
             <label className="block text-sm font-medium text-slate-700">
               Jira Project ID
@@ -68,10 +92,11 @@ export default function NewProjectPage() {
               type="text"
               value={jiraProject}
               onChange={(e) => setJiraProject(e.target.value)}
-              required
+              required={integrationType === "Jira"}
               className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
+        )} 
 
           <div>
             <label className="block text-sm font-medium text-slate-700">
