@@ -13,10 +13,11 @@ declare const process: { env: Record<string, string | undefined> };
 
 function getApiBase(): string {
   // Prefer env (SSR-safe), fallback to window.API_BASE which is set in layout.tsx
-  const env = process.env.NEXT_PUBLIC_API_BASE_URL;
-  if (env && env.trim()) return env.replace(/\/+$/, "");
+  const sanitize = (v?: string) => (v ?? "").replace(/^\uFEFF/, "").trim().replace(/\/+$/, "");
+  const env = sanitize(process.env.NEXT_PUBLIC_API_BASE_URL);
+  if (env) return env;
   if (typeof window !== "undefined" && (window as any).API_BASE) {
-    return String((window as any).API_BASE).replace(/\/+$/, "");
+    return sanitize(String((window as any).API_BASE));
   }
   throw new Error("API base URL not configured. Set NEXT_PUBLIC_API_BASE_URL or window.API_BASE.");
 }

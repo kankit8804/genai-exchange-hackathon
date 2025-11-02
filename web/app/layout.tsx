@@ -38,7 +38,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         {/* Expose API base (optional) */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `window.API_BASE=${JSON.stringify((process.env.NEXT_PUBLIC_API_BASE_URL || "https://orbit-api-938180057345.us-central1.run.app").replace(/\/+$/, ""))};`,
+            __html: `window.API_BASE=${JSON.stringify(((process.env.NEXT_PUBLIC_API_BASE_URL || "https://orbit-api-938180057345.us-central1.run.app").replace(/^\uFEFF/, "").trim().replace(/\/+$/, "")))};`,
           }}
         />
       </body>

@@ -4,14 +4,14 @@ import type { LastResult, TestCase } from "./types";
 // Minimal declaration for process.env to avoid Node types requirement
 declare const process: { env: Record<string, string | undefined> };
 
+// Remove UTF-8 BOM if present, trim whitespace, and strip trailing slashes
+const sanitizeBase = (v?: string) => (v ?? "").replace(/^\uFEFF/, "").trim().replace(/\/+$/, "");
+
 // Determine API base URL: prefer NEXT_PUBLIC_API_BASE_URL (inlined at build),
 // then window.API_BASE (set in layout.tsx), then fallback to default.
-const envBase = process?.env?.NEXT_PUBLIC_API_BASE_URL;
-const winBase = typeof window !== "undefined" ? (window as any).API_BASE : undefined;
-let API_BASE = (envBase && envBase.trim())
-  ? envBase
-  : (winBase ? String(winBase) : "https://orbit-api-938180057345.us-central1.run.app");
-API_BASE = API_BASE.replace(/\/+$/, "");
+const envBase = sanitizeBase(process?.env?.NEXT_PUBLIC_API_BASE_URL);
+const winBase = typeof window !== "undefined" ? sanitizeBase((window as any).API_BASE) : "";
+let API_BASE = envBase || winBase || "https://orbit-api-938180057345.us-central1.run.app";
 
 export const setApiBase = (url: string): void => {
   API_BASE = url;
