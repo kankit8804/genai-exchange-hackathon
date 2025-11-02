@@ -750,23 +750,39 @@ def push_jira_bulk(body: list[PushBody]):
 
 @app.get("/projects/{project_id}/members")
 def get_project_members(project_id: str):
-    db = get_firestore_client()
-    proj_ref = db.collection("projects").document(project_id)
-    members_ref = proj_ref.collection("members")
-    members = [m.to_dict() for m in members_ref.stream()]
+    try:
+        db = get_firestore_client()
+        proj_ref = db.collection("projects").document(project_id)
+        members_ref = proj_ref.collection("members")
 
-    proj_doc = proj_ref.get()
-    owner_email = None
-    if proj_doc.exists:
-        uid = proj_doc.to_dict().get("uid")
-        try:
-            owner_email = fb_auth.get_user(uid).email
-        except Exception:
-            owner_email = None
+        # Normalize member docs; tolerate missing fields by falling back to doc.id
+        members = []
+        emails = set()
+        for doc in members_ref.stream():
+            data = doc.to_dict() or {}
+            email = data.get("email") or doc.id
+            role = data.get("role", "member")
+            members.append({"email": email, "role": role})
+            emails.add(email)
 
-    if owner_email and not any(m["email"] == owner_email for m in members):
-        members.insert(0, {"email": owner_email, "role": "owner"})
-    return {"ok": True, "members": members}
+        # Determine owner email (best-effort)
+        owner_email = None
+        proj_doc = proj_ref.get()
+        if proj_doc.exists:
+            uid = (proj_doc.to_dict() or {}).get("uid")
+            if uid:
+                try:
+                    owner_email = fb_auth.get_user(uid).email
+                except Exception:
+                    owner_email = None
+
+        if owner_email and owner_email not in emails:
+            members.insert(0, {"email": owner_email, "role": "owner"})
+
+        return {"ok": True, "members": members}
+    except Exception as e:
+        log.exception(f"get_project_members failed for {project_id}: {e}")
+        raise HTTPException(500, f"Failed to fetch project members: {e}")
 
 
 @app.post("/projects/{project_id}/share")
@@ -780,22 +796,33 @@ def share_project(project_id: str, body: dict = Body(...)):
     if not email:
         raise HTTPException(status_code=400, detail="Missing email")
 
-    db = get_firestore_client()
-    proj_ref = db.collection("projects").document(project_id)
-    members_ref = proj_ref.collection("members")
+    try:
+        db = get_firestore_client()
+        proj_ref = db.collection("projects").document(project_id)
+        members_ref = proj_ref.collection("members")
 
-    existing = [m.to_dict() for m in members_ref.stream()]
-    if len(existing) >= 5:
-        raise HTTPException(status_code=400, detail="Max 5 members allowed")
-    if any(m.get("email") == email for m in existing):
-        raise HTTPException(status_code=400, detail="User already added")
+        # Fetch existing with normalization and cheap checks
+        existing = []
+        for doc in members_ref.stream():
+            d = doc.to_dict() or {}
+            existing.append({"email": d.get("email") or doc.id})
 
-    member_doc = members_ref.document(email)
-    member_doc.set({
-        "email": email,
-        "addedBy": added_by or None,
-        "role": "member",
-        "addedAt": firestore.SERVER_TIMESTAMP
-    })
+        if len(existing) >= 5:
+            raise HTTPException(status_code=400, detail="Max 5 members allowed")
+        if any(m.get("email") == email for m in existing):
+            raise HTTPException(status_code=400, detail="User already added")
 
-    return {"ok": True, "message": f"{email} added successfully"}
+        member_doc = members_ref.document(email)
+        member_doc.set({
+            "email": email,
+            "addedBy": added_by or None,
+            "role": "member",
+            "addedAt": firestore.SERVER_TIMESTAMP
+        })
+
+        return {"ok": True, "message": f"{email} added successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.exception(f"share_project failed for {project_id} adding {email}: {e}")
+        raise HTTPException(500, f"Failed to add member: {e}")
