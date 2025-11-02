@@ -2,7 +2,7 @@
 export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
-import { adminDb } from "@/lib/firebase/admin";
+import { getAdminDb } from "@/lib/firebase/admin";
 
 export async function POST(req: Request) {
   const { token, code } = await req.json();
@@ -11,6 +11,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "bad_request" }, { status: 400 });
   }
 
+  const adminDb = getAdminDb();
   const ref = adminDb.collection("pw_otps").doc(String(token));
   const snap = await ref.get();
   if (!snap.exists) {

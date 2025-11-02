@@ -2,7 +2,7 @@
 export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
-import { adminAuth, adminDb } from "@/lib/firebase/admin";
+import { getAdminAuth, getAdminDb } from "@/lib/firebase/admin";
 import { sendMail } from "@/lib/firebase/email";
 
 function strong(pw: string) {
@@ -27,7 +27,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "weak_password" }, { status: 400 });
     }
 
-    const ref = adminDb.collection("pw_otps").doc(String(token));
+  const adminDb = getAdminDb();
+  const ref = adminDb.collection("pw_otps").doc(String(token));
     const snap = await ref.get();
     if (!snap.exists) return NextResponse.json({ error: "not_found" }, { status: 404 });
 
@@ -37,8 +38,9 @@ export async function POST(req: Request) {
     if (Date.now() > data.expiresAt) return NextResponse.json({ error: "expired" }, { status: 400 });
     if (data.email !== clean) return NextResponse.json({ error: "email_mismatch" }, { status: 400 });
 
-    const user = await adminAuth.getUserByEmail(clean);
-    await adminAuth.updateUser(user.uid, { password: newPassword });
+  const adminAuth = getAdminAuth();
+  const user = await adminAuth.getUserByEmail(clean);
+  await adminAuth.updateUser(user.uid, { password: newPassword });
     await ref.update({ used: true, usedAt: Date.now() });
 
     await sendMail({

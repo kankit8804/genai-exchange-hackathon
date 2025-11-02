@@ -30,7 +30,7 @@ interface Props {
   post: <T, >(url: string, payload?: object) => Promise<T>;
   apiBase: string;
   jira_project_key?: string | null;
-  integration_Type: string | null;
+  integration_Type?: string | null;
   onUpdated?: () => void;
 }
 
