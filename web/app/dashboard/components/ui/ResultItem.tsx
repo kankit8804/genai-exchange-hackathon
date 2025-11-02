@@ -125,10 +125,13 @@ export const ResultItem = forwardRef<ResultItemHandle, Props>(
         const result: JiraResponse = await res.json();
 
         if (res.ok && result.external_url) {
+          const updated = { ...tc, isPushed: true, jiraLink: result.external_url };
           setJiraLink(result.external_url);
+          setEdited(updated);
           showNotification(`Pushed to Jira: ${result.external_key}`);
-          onMovedToPushed?.({ ...tc, isPushed: true });
-        } else {
+          onMovedToPushed?.(updated);
+        }
+        else {
           showNotification(result.detail || "Failed to create issue.", true);
         }
       } catch (e) {
