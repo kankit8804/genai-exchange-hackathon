@@ -28,7 +28,7 @@ interface Props {
   post: <T,>(url: string, payload?: object) => Promise<T>;
   apiBase: string;
   jira_project_key?: string | null;
-  integration_Type: string | null;
+  integration_Type?: string | null;
 }
 
 export function ResultItem({ tc, post, apiBase, jira_project_key, integration_Type }: Props) {
