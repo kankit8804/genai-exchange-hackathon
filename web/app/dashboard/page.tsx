@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { auth } from "@/lib/firebase/initFirebase";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -36,7 +36,7 @@ interface JiraResponse {
 }
 
 /* ========= Page ========= */
-export default function Dashboard() {
+function DashboardInner() {
   const [user, loading] = useAuthState(auth);
   const router = useRouter();
   const { showNotification } = useNotificationStore();
@@ -466,6 +466,14 @@ export default function Dashboard() {
 
       <footer className="py-8 text-center text-xs text-slate-500">© Orbit AI</footer>
     </div>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={<div>Loading…</div>}>
+      <DashboardInner />
+    </Suspense>
   );
 }
 

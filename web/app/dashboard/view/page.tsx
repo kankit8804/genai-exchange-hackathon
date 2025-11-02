@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, Suspense } from "react";
 import {
     DragDropContext,
     Droppable,
@@ -52,7 +52,7 @@ const post = async <T,>(url: string, payload?: object): Promise<T> => {
 
 const severityOrder = ["critical", "high", "medium", "low"];
 
-export default function ViewAllPage() {
+function ViewAllPageInner() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const isFromDashboard = searchParams.get("fromDashboard") === "true";
@@ -455,5 +455,13 @@ export default function ViewAllPage() {
             )}
 
         </div>
+    );
+}
+
+export default function ViewAllPage() {
+    return (
+        <Suspense fallback={<div>Loading…</div>}>
+            <ViewAllPageInner />
+        </Suspense>
     );
 }

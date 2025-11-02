@@ -35,6 +35,11 @@ if (isClient && hasClientConfig) {
 }
 
 // Export nullable instances — callers should only use these on the client at runtime.
-export const auth: any = app ? getAuth(app) : null;
-export const db: any = app ? getFirestore(app) : null;
-export const storage: any = app ? getStorage(app) : null;
+// Never export null to avoid SSR-time errors from libraries that access
+// properties like `auth.currentUser` without null checks.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const auth: any = app ? getAuth(app) : ({} as any);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const db: any = app ? getFirestore(app) : ({} as any);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const storage: any = app ? getStorage(app) : ({} as any);

@@ -1,5 +1,5 @@
 // web/lib/firebase/admin.ts
-import { cert, getApps, initializeApp } from "firebase-admin/app";
+import { cert, getApps, initializeApp, deleteApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 import { SecretManagerServiceClient } from "@google-cloud/secret-manager";
@@ -67,8 +67,9 @@ async function fetchServiceAccountFromSecretManager(): Promise<{ projectId: stri
 	try {
 		const client = new SecretManagerServiceClient();
 		const name = `projects/${projectId}/secrets/${secretName}/versions/latest`;
-		const [version] = await client.accessSecretVersion({ name });
-		const payload = version.payload?.data?.toString("utf8");
+	const [version] = await client.accessSecretVersion({ name });
+	const raw = version.payload?.data as Uint8Array | undefined;
+	const payload = raw ? Buffer.from(raw).toString("utf8") : undefined;
 		if (!payload) return null;
 		const json = JSON.parse(payload);
 		const projectIdVal = json.project_id as string | undefined;
@@ -114,7 +115,7 @@ function ensureAdminInitialized() {
 						// Delete the default app and re-initialize with the secret credentials
 						const apps = getApps();
 						if (apps.length) {
-							await apps[0].delete();
+							await deleteApp(apps[0]);
 						}
 						initializeApp({
 							credential: cert({
