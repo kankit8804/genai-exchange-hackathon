@@ -1,9 +1,12 @@
+## Next.js standalone server for Cloud Run
 
-# Stage 1: Build Next.js app
-FROM node:20-alpine AS builder
+FROM node:20-alpine AS base
+
+# Stage 1: Build the app
+FROM base AS builder
 WORKDIR /app
 
-# Accept build arguments
+# Accept build-time public envs for client bundle
 ARG NEXT_PUBLIC_FIREBASE_API_KEY
 ARG NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
 ARG NEXT_PUBLIC_FIREBASE_PROJECT_ID
@@ -13,7 +16,7 @@ ARG NEXT_PUBLIC_FIREBASE_APP_ID
 ARG NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
 ARG NEXT_PUBLIC_API_BASE_URL
 
-# Pass them as environment variables so Next.js can use them
+# Expose them to Next at build time (public only)
 ENV NEXT_PUBLIC_FIREBASE_API_KEY=$NEXT_PUBLIC_FIREBASE_API_KEY
 ENV NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=$NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
 ENV NEXT_PUBLIC_FIREBASE_PROJECT_ID=$NEXT_PUBLIC_FIREBASE_PROJECT_ID
@@ -24,19 +27,27 @@ ENV NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=$NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
 ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
 
 COPY package.json package-lock.json* ./
-RUN npm install
+# Prefer clean, reproducible installs when lockfile exists
+RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
 COPY . .
-RUN npm run build  # output: export generates /app/out
+RUN npm run build
 
-# Stage 2: Serve with Nginx
-FROM nginx:alpine
-WORKDIR /usr/share/nginx/html
+# Stage 2: Run the standalone server
+FROM base AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+ENV PORT=8080
+ENV HOST=0.0.0.0
 
-COPY --from=builder /app/out/ /usr/share/nginx/html
-RUN sed -i 's|try_files \$uri \$uri/ =404;|try_files \$uri \$uri/ /index.html;|' /etc/nginx/conf.d/default.conf
+# Copy required artifacts from the builder image
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
 
+# Cloud Run expects the server to listen on $PORT
 EXPOSE 8080
-CMD ["sh", "-c", "sed -i 's/listen       80;/listen 8080;/' /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
+
+CMD ["node", "server.js"]
 
 
