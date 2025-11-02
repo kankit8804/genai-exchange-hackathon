@@ -8,14 +8,17 @@ export type UITestCase = {
   tags?: string[];
 };
 
+// Minimal declaration for process.env so this compiles in DOM-only contexts.
+declare const process: { env: Record<string, string | undefined> };
+
 function getApiBase(): string {
-  // Prefer env (SSR-safe), fallback to window.API_BASE which you already set in layout.tsx
-  const env = process.env.NEXT_PUBLIC_API_BASE;
+  // Prefer env (SSR-safe), fallback to window.API_BASE which is set in layout.tsx
+  const env = process.env.NEXT_PUBLIC_API_BASE_URL;
   if (env && env.trim()) return env.replace(/\/+$/, "");
   if (typeof window !== "undefined" && (window as any).API_BASE) {
     return String((window as any).API_BASE).replace(/\/+$/, "");
   }
-  throw new Error("API base URL not configured. Set NEXT_PUBLIC_API_BASE or window.API_BASE.");
+  throw new Error("API base URL not configured. Set NEXT_PUBLIC_API_BASE_URL or window.API_BASE.");
 }
 
 export async function pushToAzure(items: UITestCase[]) {

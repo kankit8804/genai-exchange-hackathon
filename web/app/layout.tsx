@@ -19,6 +19,9 @@ export const metadata: Metadata = {
   description: "AI Test Case Generator",
 };
 
+// Minimal declaration for process.env so this compiles in DOM-only contexts.
+declare const process: { env: Record<string, string | undefined> };
+
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
@@ -35,7 +38,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         {/* Expose API base (optional) */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `window.API_BASE="${"https://orbit-api-938180057345.us-central1.run.app"}";`,
+            __html: `window.API_BASE=${JSON.stringify((process.env.NEXT_PUBLIC_API_BASE_URL || "https://orbit-api-938180057345.us-central1.run.app").replace(/\/+$/, ""))};`,
           }}
         />
       </body>
