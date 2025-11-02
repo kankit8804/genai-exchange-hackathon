@@ -70,7 +70,7 @@ def ensure_vertex():
 
 # -------------------- FastAPI --------------------
 origins = [
-    "http://localhost:3000",  # frontend (Next.js local)
+    "https://orbit-web-938180057345.us-central1.run.app/",  # frontend (Next.js local)
     "http://127.0.0.1:3000",  # just in case
 ]
 app = FastAPI(title="Orbit AI Test Case Generator API", version="0.4")
