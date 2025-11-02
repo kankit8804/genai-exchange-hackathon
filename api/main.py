@@ -588,7 +588,7 @@ def push_jira(body: PushBody):
     issue_key = data.get("key")
     issue_url = f"https://{jira_domain}/browse/{issue_key}"
 
-    update_is_pushed_by_test_id(body.test_id, True)
+    # update_is_pushed_by_test_id(body.test_id, True)
 
     return {"ok": True, "external_key": issue_key, "external_url": issue_url}
 

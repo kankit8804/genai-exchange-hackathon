@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useMemo, useEffect, Suspense } from "react";
 import {
@@ -34,7 +35,7 @@ interface Project {
     id: string;
     projectName: string;
     description: string;
-    jiraProjectId ?: string;
+    jiraProjectId?: string;
     createdAt: string;
     integrationType: string;
 }
@@ -68,6 +69,7 @@ function ViewAllPageInner() {
     const [showModal, setShowModal] = useState(false);
     const [addingStatus, setAddingStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
     const [jiraProjectKey, setJiraProjectKey] = useState<string | null>(null);
+    const itemRefs = useRef<{ [key: string]: any }>({});
 
 
     const fetchProjects = async () => {
@@ -84,13 +86,13 @@ function ViewAllPageInner() {
             const snapshot = await getDocs(q);
             const data: Project[] = snapshot.docs.map((doc) => {
                 const project = doc.data() as any;
-                                 console.log("Rendering project.jiraProjectId :",project.jiraProjectId );
-                                            console.log("projectName :",project.projectName);
+                console.log("Rendering project.jiraProjectId :", project.jiraProjectId);
+                console.log("projectName :", project.projectName);
                 return {
                     id: doc.id,
                     projectName: project.projectName,
                     description: project.description,
-                    jiraProjectId : project.jiraProjectId ,
+                    jiraProjectId: project.jiraProjectId,
                     integrationType: project.integrationType,
                     createdAt: project.createdAt
                         ? new Date(project.createdAt.seconds * 1000).toLocaleString()
@@ -168,13 +170,13 @@ function ViewAllPageInner() {
     }, [selectedProject]);
 
     useEffect(() => {
-         console.log("Rendering integration_Type:",intergationType);
-                                            console.log("Rendering jira_project_key:",jiraProjectKey);
+        console.log("Rendering integration_Type:", intergationType);
+        console.log("Rendering jira_project_key:", jiraProjectKey);
         if (selectedProject && projects.length > 0) {
             const project = projects.find((p) => p.id === selectedProject);
             if (project) {
                 setIntergationType(prev => prev || project.integrationType || null);
-                setJiraProjectKey(prev => prev || project.jiraProjectId  || null);
+                setJiraProjectKey(prev => prev || project.jiraProjectId || null);
             }
         }
     }, [selectedProject, projects]);
@@ -199,7 +201,15 @@ function ViewAllPageInner() {
         });
 
         setTestCases(updated);
+
+        if (destination.droppableId === "pushed") {
+            const ref = itemRefs.current[draggableId];
+            if (ref && ref.triggerPush) {
+                ref.triggerPush();
+            }
+        }
     };
+
 
     const handleSaveTestCase = async (data: any) => {
         if (!selectedProject) {
@@ -304,7 +314,7 @@ function ViewAllPageInner() {
 
 
             <Droppable droppableId={droppableId}>
-                {(provided: DroppableProvided) => (
+                {(provided) => (
                     <div
                         ref={provided.innerRef}
                         {...provided.droppableProps}
@@ -313,7 +323,7 @@ function ViewAllPageInner() {
                         {cases.length ? (
                             cases.map((tc, index) => (
                                 <Draggable key={tc.test_id} draggableId={tc.test_id} index={index}>
-                                    {(dragProvided: DraggableProvided, snapshot) => (
+                                    {(dragProvided, snapshot) => (
                                         <div
                                             ref={dragProvided.innerRef}
                                             {...dragProvided.draggableProps}
@@ -326,12 +336,15 @@ function ViewAllPageInner() {
                                                     : dragProvided.draggableProps.style?.transform,
                                             }}
                                             className={`transition-all duration-150 ${snapshot.isDragging
-                                                ? "scale-[1.02] shadow-2xl cursor-grabbing"
-                                                : "cursor-grab"
+                                                    ? "scale-[1.02] shadow-2xl cursor-grabbing"
+                                                    : "cursor-grab"
                                                 }`}
                                         >
                                             <div className={snapshot.isDragging ? "bg-white rounded-md" : ""}>
                                                 <ResultItem
+                                                    ref={(el) => {
+                                                        itemRefs.current[tc.test_id] = el;
+                                                    }}
                                                     key={tc.test_id}
                                                     tc={tc}
                                                     post={post}
@@ -354,6 +367,7 @@ function ViewAllPageInner() {
                     </div>
                 )}
             </Droppable>
+
 
             {showAdd && (
                 <>
