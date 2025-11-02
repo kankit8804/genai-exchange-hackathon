@@ -34,8 +34,9 @@ interface Project {
     id: string;
     projectName: string;
     description: string;
-    jiraProject?: string;
+    jiraProjectId ?: string;
     createdAt: string;
+    integrationType: string;
 }
 
 const API_BASE = "http://127.0.0.1:8000";
@@ -61,10 +62,12 @@ export default function ViewAllPage() {
     const [searchText, setSearchText] = useState("");
     const [projects, setProjects] = useState<Project[]>([]);
     const [selectedProject, setSelectedProject] = useState<string | null>(null);
+    const [intergationType, setIntergationType] = useState<string | null>(null);
     const [loadingStoredCases, setLoadingStoredCases] = useState(false);
     const { showNotification } = useNotificationStore();
     const [showModal, setShowModal] = useState(false);
     const [addingStatus, setAddingStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+    const [jiraProjectKey, setJiraProjectKey] = useState<string | null>(null);
 
 
     const fetchProjects = async () => {
@@ -81,15 +84,19 @@ export default function ViewAllPage() {
             const snapshot = await getDocs(q);
             const data: Project[] = snapshot.docs.map((doc) => {
                 const project = doc.data() as any;
+                                 console.log("Rendering project.jiraProjectId :",project.jiraProjectId );
+                                            console.log("projectName :",project.projectName);
                 return {
                     id: doc.id,
                     projectName: project.projectName,
                     description: project.description,
-                    jiraProject: project.jiraProject,
+                    jiraProjectId : project.jiraProjectId ,
+                    integrationType: project.integrationType,
                     createdAt: project.createdAt
                         ? new Date(project.createdAt.seconds * 1000).toLocaleString()
                         : "N/A",
                 };
+
             });
 
             setProjects(data);
@@ -97,6 +104,7 @@ export default function ViewAllPage() {
 
             if (data.length > 0 && !selectedProject && !isFromDashboard) {
                 setSelectedProject(data[0].id);
+                setIntergationType(data[0].integrationType);
             }
         } catch (err) {
             console.error("Error fetching projects:", err);
@@ -158,6 +166,19 @@ export default function ViewAllPage() {
             fetchData(selectedProject);
         }
     }, [selectedProject]);
+
+    useEffect(() => {
+         console.log("Rendering integration_Type:",intergationType);
+                                            console.log("Rendering jira_project_key:",jiraProjectKey);
+        if (selectedProject && projects.length > 0) {
+            const project = projects.find((p) => p.id === selectedProject);
+            if (project) {
+                setIntergationType(prev => prev || project.integrationType || null);
+                setJiraProjectKey(prev => prev || project.jiraProjectId  || null);
+            }
+        }
+    }, [selectedProject, projects]);
+
 
     const handleDragEnd = (result: any) => {
         const { source, destination, draggableId } = result;
@@ -316,9 +337,10 @@ export default function ViewAllPage() {
                                                     post={post}
                                                     apiBase={API_BASE}
                                                     onUpdated={() => {
-                                                        console.log("this is getting called ");
                                                         if (selectedProject) fetchData(selectedProject, true);
                                                     }}
+                                                    jira_project_key={jiraProjectKey}
+                                                    integration_Type={intergationType}
                                                 />
                                             </div>
                                         </div>

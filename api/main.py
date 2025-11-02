@@ -8,6 +8,7 @@ from firebase_utils import get_firestore_client
 from firebase_admin import firestore 
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from typing import Dict, Any
 import traceability
 import requests
 import difflib
