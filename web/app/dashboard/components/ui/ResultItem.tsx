@@ -7,7 +7,7 @@ import { auth, db } from "@/lib/firebase/initFirebase";
 import { doc, getDoc } from "firebase/firestore";
 import { useNotificationStore } from "@/app/store/notificationStore";
 import { pushToAzure } from "@/lib/utils/alm";
-
+import Link from "next/link";
 interface TestCase {
   req_id: string;
   test_id: string;
@@ -15,6 +15,7 @@ interface TestCase {
   severity: string;
   expected_result: string;
   steps: string[];
+  isPushed?: boolean;
   trace_link?: string;
   createdAt?: string | number | Date;
 }
@@ -32,6 +33,7 @@ interface Props {
   jira_project_key?: string | null;
   integration_Type?: string | null;
   onUpdated?: () => void;
+  onMovedToPushed?: (updatedTc: TestCase) => void;
 }
 
 export interface ResultItemHandle {
@@ -39,7 +41,7 @@ export interface ResultItemHandle {
 }
 
 export const ResultItem = forwardRef<ResultItemHandle, Props>(
-  ({ tc, post, apiBase, jira_project_key, onUpdated, integration_Type }, ref) => {
+  ({ tc, post, apiBase, jira_project_key, onUpdated, integration_Type, onMovedToPushed, }, ref) => {
     const [open, setOpen] = useState(false);
     const [pushing, setPushing] = useState(false);
     const [jiraLink, setJiraLink] = useState<string>("");
@@ -125,6 +127,7 @@ export const ResultItem = forwardRef<ResultItemHandle, Props>(
         if (res.ok && result.external_url) {
           setJiraLink(result.external_url);
           showNotification(`Pushed to Jira: ${result.external_key}`);
+          onMovedToPushed?.({ ...tc, isPushed: true });
         } else {
           showNotification(result.detail || "Failed to create issue.", true);
         }
@@ -138,6 +141,7 @@ export const ResultItem = forwardRef<ResultItemHandle, Props>(
 
     useImperativeHandle(ref, () => ({
       triggerPush: async () => {
+        if (jiraLink) return;
         if (integration_Type === "Jira") await pushToJira();
         else if (integration_Type === "Azure") {
           setPushing(true);
@@ -156,12 +160,12 @@ export const ResultItem = forwardRef<ResultItemHandle, Props>(
 
     const formattedDate = tc.createdAt
       ? new Date(tc.createdAt).toLocaleString("en-US", {
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-        })
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
       : null;
 
     return (
@@ -180,6 +184,22 @@ export const ResultItem = forwardRef<ResultItemHandle, Props>(
                 <SeverityBadge level={tc.severity} />
               </div>
             )}
+            <div className="flex items-center">
+              {tc.req_id ? (
+                <Link
+                  href={`/traceability/${tc.req_id}?test_id=${tc.test_id}`}
+                  prefetch={false}
+                  className="inline-flex items-center rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition"
+                >
+                  Trace Link →
+                </Link>
+              ) : (
+                <span className="inline-flex items-center rounded-md border border-slate-100 bg-slate-50 px-3 py-1.5 text-xs text-slate-400 cursor-not-allowed">
+                  No Trace
+                </span>
+              )}
+            </div>
+
 
             <div className="mt-1 text-[12px] text-slate-500">
               Test: {tc.test_id} • REQ: {tc.req_id}
@@ -192,51 +212,36 @@ export const ResultItem = forwardRef<ResultItemHandle, Props>(
           </div>
 
           <div className="flex items-center gap-2">
-            {integration_Type === "Jira" && jira_project_key ? (
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={pushToJira}
-                  disabled={pushing}
-                  className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs hover:bg-slate-50 disabled:opacity-60"
-                >
-                  {pushing ? "Pushing…" : "Push to Jira"}
-                </button>
-
-                {jiraLink && (
-                  <a
-                    href={jiraLink}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-xs text-emerald-700 hover:underline"
-                  >
-                    View Issue ↗
-                  </a>
-                )}
-              </div>
-            ) : null}
-
-            {integration_Type === "Azure" && jira_project_key ? (
-              <div className="flex items-center gap-2">
-                <button
-                  // onClick={}
-                  disabled={pushing}
-                  className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs hover:bg-slate-50 disabled:opacity-60"
-                >
-                  {pushing ? "Pushing…" : "Push to Azure"}
-                </button>
-                 {jiraLink && (
-              <a
-                href={jiraLink}
-                target="_blank"
-                rel="noreferrer"
-                className="text-xs text-emerald-700 hover:underline"
+            {/* Show button before push */}
+            {!pushing && !jiraLink && (
+              <button
+                onClick={pushToJira}
+                className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs hover:bg-slate-50"
               >
-                View Issue ↗
-              </a>
+                Push to Jira
+              </button>
             )}
-              </div>
-            ) : null}
 
+            {pushing && !jiraLink && (
+              <span className="text-xs text-slate-500">Pushing…</span>
+            )}
+
+            {jiraLink && (
+              <>
+                <span className="text-xs text-emerald-700 font-medium">Pushed ✓</span>
+                <a
+                  href={jiraLink}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs text-emerald-700 hover:underline"
+                >
+                  View Issue↗
+                </a>
+              </>
+            )}
+
+
+            {/* Details toggle button */}
             <button
               onClick={() => setOpen((v) => !v)}
               className="text-xs text-slate-600 hover:underline"
@@ -245,6 +250,7 @@ export const ResultItem = forwardRef<ResultItemHandle, Props>(
             </button>
           </div>
         </div>
+
 
         {open && (
           <>
@@ -308,7 +314,7 @@ export const ResultItem = forwardRef<ResultItemHandle, Props>(
         )}
 
         {/* Bottom-right edit button (only when not editing) */}
-      {/* {!editing && (
+        {/* {!editing && (
         <button
           onClick={() => setEditing(true)}
           title="Edit test case"
