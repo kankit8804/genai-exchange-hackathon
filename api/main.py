@@ -69,16 +69,21 @@ def ensure_vertex():
         _vertex_ready = True
 
 # -------------------- FastAPI --------------------
-origins = [
-    "https://orbit-web-938180057345.us-central1.run.app/",  # frontend (Next.js local)
-    "http://127.0.0.1:3000",  # just in case
-]
 app = FastAPI(title="Orbit AI Test Case Generator API", version="0.4")
+
+# Explicit CORS allowlist: Cloud Run web and common local dev origins.
+ALLOWED_ORIGINS = [
+    "https://orbit-web-938180057345.us-central1.run.app",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_methods=["*"],
     allow_headers=["*"],
+    allow_credentials=False,
 )
 
 # -------------------- Helpers --------------------
