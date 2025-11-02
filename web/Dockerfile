@@ -38,7 +38,7 @@ FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=8080
-ENV HOST=0.0.0.0
+ENV HOSTNAME=0.0.0.0
 
 # Copy required artifacts from the builder image
 COPY --from=builder /app/public ./public
