@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import { SeverityBadge } from "./SeverityBadge";
+import { Pencil, Check, X } from "lucide-react";
 import { auth, db } from "@/lib/firebase/initFirebase";
 import { doc, getDoc } from "firebase/firestore";
+import { useNotificationStore } from "@/app/store/notificationStore";
 import { pushToAzure } from "@/lib/utils/alm";
-
+import Link from "next/link";
 interface TestCase {
   req_id: string;
   test_id: string;
@@ -25,18 +27,66 @@ interface JiraResponse {
 
 interface Props {
   tc: TestCase;
-  post: <T,>(url: string, payload?: object) => Promise<T>;
+  post: <T, >(url: string, payload?: object) => Promise<T>;
   apiBase: string;
   jira_project_key?: string | null;
   integration_Type?: string | null;
+  onUpdated?: () => void;
 }
 
-export function ResultItem({ tc, post, apiBase, jira_project_key, integration_Type }: Props) {
+export function ResultItem({ tc, post, apiBase, jira_project_key, onUpdated, integration_Type }: Props) {
   const [open, setOpen] = useState(false);
   const [pushing, setPushing] = useState(false);
   const [jiraLink, setJiraLink] = useState<string>("");
+  const { showNotification } = useNotificationStore();
+  const [editing, setEditing] = useState(false);
+  const [edited, setEdited] = useState<TestCase>(tc);
+  const [saving, setSaving] = useState(false);
+  const [changed, setChanged] = useState(false);
 
   const user = auth.currentUser;
+
+  const handleChange = (field: keyof TestCase, value: string | string[]) => {
+    setEdited((prev) => ({ ...prev, [field]: value }));
+    setChanged(true);
+  };
+
+ interface UpdateResponse {
+  ok: boolean;
+  test_id?: string;
+  error?: string;
+}
+
+const handleSaveEdit = async () => {
+  try {
+    setSaving(true);
+    const payload = {
+      ...edited,
+      user_id: user?.uid,
+    };
+
+    const result = await post<UpdateResponse>(`${apiBase}/manual/testcase/update`, payload);
+
+    console.log("Update result:", result);
+
+    if (result.ok) {
+      setEditing(false);
+      setChanged(false);
+      
+      showNotification("Testcase updated.");
+      onUpdated?.();
+    } else {
+      showNotification(result.error || "Failed to update the testcase.", true);
+    }
+  } catch (err) {
+    console.error(err);
+    showNotification("Failed to update the testcase.", true);
+  } finally {
+    setSaving(false);
+  }
+};
+
+
 
   const pushToJira = async (): Promise<void> => {
     try {
@@ -67,7 +117,7 @@ export function ResultItem({ tc, post, apiBase, jira_project_key, integration_Ty
         jira_domain: jira.domain,
         jira_email: jira.email,
         jira_api_token: jira.apiToken,
-        jira_project_key: jira_project_key,
+        jira_project_key,
         jira_issue_type: "Task",
         uid: user.uid,
         summary: tc.title,
@@ -101,22 +151,48 @@ export function ResultItem({ tc, post, apiBase, jira_project_key, integration_Ty
 
   const formattedDate = tc.createdAt
     ? new Date(tc.createdAt).toLocaleString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      })
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    })
     : null;
 
   return (
-    <li className="rounded-lg border border-slate-200 bg-white p-4">
+    <li className="rounded-lg border border-slate-200 bg-white p-4 relative">
       <div className="flex items-start gap-3">
         <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <h4 className="text-sm font-semibold">{tc.title}</h4>
-            <SeverityBadge level={tc.severity} />
-          </div>
+          {editing ? (
+            <input
+              value={edited.title}
+              onChange={(e) => handleChange("title", e.target.value)}
+              className="w-full border border-slate-200 rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+
+            />
+          ) : (
+            <div className="flex items-center gap-2">
+              <h4 className="text-sm font-semibold">{tc.title}</h4>
+              <SeverityBadge level={tc.severity} />
+            </div>
+          )}
+          <div className="flex items-center">
+  {tc.req_id ? (
+    <Link
+      href={`/traceability/${tc.req_id}?test_id=${tc.test_id}`}
+      prefetch={false}
+      className="inline-flex items-center rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition"
+    >
+      Trace Link →
+    </Link>
+  ) : (
+    <span className="inline-flex items-center rounded-md border border-slate-100 bg-slate-50 px-3 py-1.5 text-xs text-slate-400 cursor-not-allowed">
+      No Trace
+    </span>
+  )}
+</div>
+
+
           <div className="mt-1 text-[12px] text-slate-500">
             Test: {tc.test_id} • REQ: {tc.req_id}
           </div>
@@ -128,53 +204,39 @@ export function ResultItem({ tc, post, apiBase, jira_project_key, integration_Ty
         </div>
 
         <div className="flex items-center gap-2">
-        {integration_Type === "Jira" && jira_project_key ? (
-          <div className="flex items-center gap-2">
+          {/* Show button before push */}
+          {!pushing && !jiraLink && (
             <button
               onClick={pushToJira}
-              disabled={pushing}
-              className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs hover:bg-slate-50 disabled:opacity-60"
+              className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs hover:bg-slate-50"
             >
-              {pushing ? "Pushing…" : "Push to Jira"}
+              Push to Jira
             </button>
+          )}
 
-            {jiraLink && (
+          {/* Show progress while pushing */}
+          {pushing && !jiraLink && (
+            <span className="text-xs text-slate-500">Pushing…</span>
+          )}
+
+          {/* After successful push */}
+          {jiraLink && (
+            <>
+              <span className="text-xs text-emerald-700 font-medium">
+                Pushed ✓
+              </span>
               <a
                 href={jiraLink}
                 target="_blank"
                 rel="noreferrer"
                 className="text-xs text-emerald-700 hover:underline"
               >
-                View Issue ↗
+                View Issue↗
               </a>
-            )}
-          </div>
-        ) : null}
+            </>
+          )}
 
-        {integration_Type === "Azure" && jira_project_key ? (
-          <div className="flex items-center gap-2">
-            <button
-             // onClick={}
-              disabled={pushing}
-              className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs hover:bg-slate-50 disabled:opacity-60"
-            >
-              {pushing ? "Pushing…" : "Push to Azure"}
-            </button>
-
-            {jiraLink && (
-              <a
-                href={jiraLink}
-                target="_blank"
-                rel="noreferrer"
-                className="text-xs text-emerald-700 hover:underline"
-              >
-                View Issue ↗
-              </a>
-            )}
-          </div>
-        ) : null}
-
-
+          {/* Details toggle button */}
           <button
             onClick={() => setOpen((v) => !v)}
             className="text-xs text-slate-600 hover:underline"
@@ -188,32 +250,80 @@ export function ResultItem({ tc, post, apiBase, jira_project_key, integration_Ty
       {open && (
         <>
           <div className="my-3 h-px bg-slate-200" />
-          <div className="text-xs text-slate-700">
-            <div className="mb-1 font-semibold text-slate-800">Steps</div>
-            <ol className="list-decimal pl-5 space-y-1">
-              {tc.steps.map((s, i) => (
-                <li key={i}>{s}</li>
-              ))}
-            </ol>
-          </div>
-          <div className="mt-3 text-xs">
-            <div className="mb-1 font-semibold text-slate-800">Expected</div>
-            <div className="text-slate-700">{tc.expected_result}</div>
-          </div>
-          {tc.req_id && (
-            <div className="mt-3">
-              <a
-                className="text-xs text-emerald-700 hover:underline"
-                href={`/traceability/${tc.req_id}?test_id=${tc.test_id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Traceability Link ↗
-              </a>
+
+          {/* Editable section */}
+          <div className="text-xs text-slate-700 space-y-3">
+            <div>
+              <div className="font-semibold text-slate-800 mb-1">Steps</div>
+              <ol className="list-decimal pl-5 space-y-1.5">
+                {(editing ? edited.steps : tc.steps).map((s, i) =>
+                  editing ? (
+                    <input
+                      key={i}
+                      value={s}
+                      onChange={(e) => {
+                        const newSteps = [...edited.steps];
+                        newSteps[i] = e.target.value;
+                        handleChange("steps", newSteps);
+                      }}
+                      className="w-full border border-slate-200 rounded-md px-2 py-1 text-[13px] focus:outline-none focus:ring-1 focus:ring-emerald-500 transition-all"
+                      style={{ lineHeight: "1.2rem" }}
+                    />
+                  ) : (
+                    <li key={i} className="text-[14px] leading-[1.3rem]">{s}</li>
+                  )
+                )}
+              </ol>
             </div>
-          )}
+
+
+            <div>
+              <div className="font-semibold text-slate-800 mb-1">Expected Result</div>
+              {editing ? (
+                <textarea
+                  value={edited.expected_result}
+                  onChange={(e) => handleChange("expected_result", e.target.value)}
+                  className="w-full border border-slate-200 rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+
+                />
+              ) : (
+                <div className="text-slate-700">{tc.expected_result}</div>
+              )}
+            </div>
+          </div>
         </>
       )}
+
+      {/* Save / Cancel buttons */}
+      {editing && (
+        <div className="flex justify-end gap-2 mt-4">
+          <button
+            onClick={() => setEditing(false)}
+            className="px-3 py-1.5 text-xs rounded-md bg-gray-100 hover:bg-gray-200 text-slate-700 transition-colors flex items-center gap-1 shadow-sm"
+          >
+            <X size={14} /> Cancel
+          </button>
+          <button
+            onClick={handleSaveEdit}
+            disabled={saving}
+            className="px-3 py-1.5 text-xs rounded-md bg-emerald-600 hover:bg-emerald-700 text-white transition-colors flex items-center gap-1 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {saving ? "Saving..." : (<><Check size={14} /> Save</>)}
+          </button>
+        </div>
+      )}
+
+      {/* Bottom-right edit button (only when not editing) */}
+      {!editing && (
+        <button
+          onClick={() => setEditing(true)}
+          title="Edit test case"
+          className="absolute bottom-3 right-3 px-3 py-1.5 text-xs rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 transition-colors flex items-center gap-1 shadow-sm"
+        >
+          <Pencil size={14} /> 
+        </button>
+      )}
+
     </li>
   );
 }
