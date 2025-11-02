@@ -7,7 +7,7 @@ import { auth, db } from "@/lib/firebase/initFirebase";
 import { doc, getDoc } from "firebase/firestore";
 import { useNotificationStore } from "@/app/store/notificationStore";
 import { pushToAzure } from "@/lib/utils/alm";
-
+import Link from "next/link";
 interface TestCase {
   req_id: string;
   test_id: string;
@@ -176,6 +176,22 @@ const handleSaveEdit = async () => {
               <SeverityBadge level={tc.severity} />
             </div>
           )}
+          <div className="flex items-center">
+  {tc.req_id ? (
+    <Link
+      href={`/traceability/${tc.req_id}?test_id=${tc.test_id}`}
+      prefetch={false}
+      className="inline-flex items-center rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition"
+    >
+      Trace Link →
+    </Link>
+  ) : (
+    <span className="inline-flex items-center rounded-md border border-slate-100 bg-slate-50 px-3 py-1.5 text-xs text-slate-400 cursor-not-allowed">
+      No Trace
+    </span>
+  )}
+</div>
+
 
           <div className="mt-1 text-[12px] text-slate-500">
             Test: {tc.test_id} • REQ: {tc.req_id}
