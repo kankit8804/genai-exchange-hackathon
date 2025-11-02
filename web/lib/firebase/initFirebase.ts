@@ -6,14 +6,22 @@ import { getStorage } from "firebase/storage";
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
+// Declare a minimal "process" type so TypeScript can compile in a DOM-only
+// project config without @types/node. Next.js inlines NEXT_PUBLIC_* at build time.
+declare const process: { env: Record<string, string | undefined> };
+
+// Trim all env vars to avoid stray CR/LF (e.g., "orbit-ai-1234\r") that break
+// Firestore requests with malformed database resource names.
+const safeTrim = (v?: string) => (v ?? "").trim();
+
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
+  apiKey: safeTrim(process.env.NEXT_PUBLIC_FIREBASE_API_KEY),
+  authDomain: safeTrim(process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN),
+  projectId: safeTrim(process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID),
+  storageBucket: safeTrim(process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET),
+  messagingSenderId: safeTrim(process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID),
+  appId: safeTrim(process.env.NEXT_PUBLIC_FIREBASE_APP_ID),
+  measurementId: safeTrim(process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID)
 };
 
 // Only initialize the Firebase Web SDK on the client and when the public envs exist.
@@ -21,8 +29,8 @@ const firebaseConfig = {
 // causes firebase to throw (invalid-api-key). Guarding prevents prerender errors.
 const isClient = typeof window !== "undefined";
 const hasClientConfig = Boolean(
-  process.env.NEXT_PUBLIC_FIREBASE_API_KEY &&
-  process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
+  firebaseConfig.apiKey &&
+  firebaseConfig.projectId
 );
 
 let app: ReturnType<typeof initializeApp> | undefined;
@@ -34,13 +42,13 @@ if (isClient && hasClientConfig) {
     // so build/prerender won't fail.
     // eslint-disable-next-line no-console
     console.error("[client firebase] initializeApp failed:", e);
-    console.error("[client firebase] Config check - API Key exists:", Boolean(process.env.NEXT_PUBLIC_FIREBASE_API_KEY));
-    console.error("[client firebase] Config check - Project ID exists:", Boolean(process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID));
+    console.error("[client firebase] Config check - API Key exists:", Boolean(firebaseConfig.apiKey));
+    console.error("[client firebase] Config check - Project ID exists:", Boolean(firebaseConfig.projectId));
   }
 } else if (isClient && !hasClientConfig) {
   console.error("[client firebase] Missing required Firebase environment variables!");
-  console.error("NEXT_PUBLIC_FIREBASE_API_KEY:", process.env.NEXT_PUBLIC_FIREBASE_API_KEY ? "Set" : "Missing");
-  console.error("NEXT_PUBLIC_FIREBASE_PROJECT_ID:", process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ? "Set" : "Missing");
+  console.error("NEXT_PUBLIC_FIREBASE_API_KEY:", firebaseConfig.apiKey ? "Set" : "Missing");
+  console.error("NEXT_PUBLIC_FIREBASE_PROJECT_ID:", firebaseConfig.projectId ? "Set" : "Missing");
 }
 
 // Export nullable instances — callers should only use these on the client at runtime.

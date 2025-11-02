@@ -40,8 +40,11 @@ function Create-SecretFromValue([string]$name, [string]$value) {
   } else {
     Write-Host "Secret $name already exists, adding a new version."
   }
+  # Sanitize value to remove stray CR/LF and surrounding whitespace
+  $clean = ($value -replace "`r", "")
+  $clean = $clean.Trim()
   $tmp = Join-Path $PWD "$name.txt"
-  Set-Content -Path $tmp -Value $value -NoNewline
+  Set-Content -Path $tmp -Value $clean -NoNewline -Encoding utf8
   gcloud secrets versions add $name --project $PROJECT_ID --data-file=$tmp --quiet
   Remove-Item $tmp -ErrorAction SilentlyContinue
 }
