@@ -56,6 +56,7 @@ jobs:
         run: |
           gcloud run deploy ${{ env.SERVICE_NAME }} \
             --image ${{ env.AR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.AR_REPOSITORY }}/${{ env.SERVICE_NAME }}:${{ github.sha }} \
+            --service-account orbit-api-sa@${{ env.PROJECT_ID }}.iam.gserviceaccount.com \
             --region ${{ env.REGION }} \
             --platform managed \
             --allow-unauthenticated \
