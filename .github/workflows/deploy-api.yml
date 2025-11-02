@@ -61,6 +61,7 @@ jobs:
             --platform managed \
             --allow-unauthenticated \
             --set-env-vars="PROJECT_ID=${{ env.PROJECT_ID }}" \
+            --set-env-vars="FIREBASE_PROJECT_ID=orbit-ai-3d3a5" \
             --set-env-vars="WEB_ALLOWED_ORIGIN_REGEX=^https://orbit-web-938180057345\.us-central1\.run\.app$|^http://(localhost|127\.0\.0\.1):3000$" \
             --memory 1Gi \
             --cpu 1 \
