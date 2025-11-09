@@ -46,7 +46,6 @@ export default function PushAllToJira({ testCases, apiBase, jira_project_key }: 
         jira_api_token: jira.apiToken,
         jira_project_key,
         jira_issue_type: "Task",
-        uid: user.uid,
         summary: tc.title,
         steps: tc.steps,
         test_id: tc.test_id,
