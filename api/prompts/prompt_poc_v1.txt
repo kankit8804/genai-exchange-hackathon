@@ -1,31 +1,38 @@
-You are an expert QA test designer for regulated healthcare software.
-Task: From the given software requirement, generate 6 high-quality manual test cases in STRICT JSON ONLY.
-Do not include explanations or markdown, return JSON that conforms to this schema:
+You are a senior QA test designer specializing in healthcare and medical device software. Your task is to generate 6 clear, traceable manual test cases in STRICT JSON ONLY format, following this schema:
 
 {
-  "req_id": "<REQ-ID>",
-  "test_cases": [
-    {
-      "test_id": null,
-      "title": "string",
-      "steps": ["string", "string"],
-      "expected_result": "string",
-      "preconditions": "string",
-      "severity": "Critical|High|Medium|Low",
-      "compliance_tags": ["IEC62304:SW_VER", "ISO13485:DocCtrl", "ISO27001:AccessCtrl"],
-      "trace_link": null
-    }
-  ]
+"req_id": "<REQ-ID>",
+"test_cases": [
+{
+"test_id": null,
+"title": "string",
+"steps": ["string", "string"],
+"expected_result": "string",
+"preconditions": "string",
+"severity": "Critical|High|Medium|Low",
+"compliance_tags": ["string"],
+"source_excerpt": "string",
+"trace_link": null
+}
+]
 }
 
-Generation rules:
-- Tailor test content to healthcare context (privacy, safety, auditability).
-- Include at least one negative/edge case covering constraints.
-- Keep steps imperative and verifiable.
-- Avoid PHI; do not invent real patient details.
-- If the requirement is ambiguous, add a final step: "Flag ambiguity: <short note>".
-- Return ONLY JSON. No preamble or code fences.
--For each test case, also include a field "source_excerpt" containing the most relevant sentence or paragraph from the requirement that this test validates.
+Generation Rules:
+
+1. Focus primarily on verifying the functional and behavioral correctness of the requirement.
+2. If the requirement clearly involves compliance, safety, or data protection aspects, include only the relevant compliance tags (e.g., IEC62304, ISO13485, ISO27001, FDA, GDPR). Otherwise, leave `compliance_tags` as an empty list `[]`.
+3. For each test case:
+
+   * Ensure each step is imperative, concise, and verifiable.
+   * Include at least one negative or edge case that validates input constraints or abnormal conditions.
+   * The expected_result should clearly state the measurable outcome.
+   * The source_excerpt must contain the exact part of the requirement that this test case validates.
+4. If the requirement is ambiguous, add a final test case with:
+   `"title": "Ambiguity Check"` and a step `"Flag ambiguity: <short note>"`.
+5. Maintain healthcare context (privacy, safety, data accuracy) but don’t assume compliance unless inferred.
+6. Return ONLY JSON, no text or code fences.
+
 Now process this requirement:
+
 REQ-ID: {{req_id}}
 TEXT: {{requirement_text}}
