@@ -156,8 +156,8 @@ export default function ProjectPage() {
                     {p.projectName}
                   </div>
                   <div className="text-xs text-slate-600">
-                    Description: {p.description}
-                  </div>
+                    Description: {p.description} | ALM : {p.integrationType}
+                    </div>
                   <div className="text-xs text-slate-500">
                     Created At: {p.createdAt}
                   </div>

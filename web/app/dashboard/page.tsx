@@ -444,11 +444,11 @@ function DashboardInner() {
           {/* NEW: ALM Integration card placed directly under Results */}
           {hasResults ? (
             <>
-              {integrationType === "Azure" || (
+              {integrationType === "Azure" && (
                 <ALMIntegration testCases={sorted} />
               )}
 
-              {integrationType === "Jira" || (
+              {integrationType === "Jira" && (
                 <PushAllToJira
                   testCases={sorted}
                   apiBase={API_BASE}
