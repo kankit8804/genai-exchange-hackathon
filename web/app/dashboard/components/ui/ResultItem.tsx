@@ -51,6 +51,7 @@ export const ResultItem = forwardRef<ResultItemHandle, Props>(
     const [saving, setSaving] = useState(false);
     const [changed, setChanged] = useState(false);
     const user = auth.currentUser;
+    const [azureLink, setAzureLink] = useState<string>("");
 
     const handleChange = (field: keyof TestCase, value: string | string[]) => {
       setEdited((prev) => ({ ...prev, [field]: value }));
@@ -216,32 +217,69 @@ export const ResultItem = forwardRef<ResultItemHandle, Props>(
 
           <div className="flex items-center gap-2">
             {/* Show button before push */}
-            {!pushing && !jiraLink && (
-              <button
-                onClick={pushToJira}
-                className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs hover:bg-slate-50"
-              >
-                Push to Jira
-              </button>
-            )}
-
-            {pushing && !jiraLink && (
-              <span className="text-xs text-slate-500">Pushing…</span>
-            )}
-
-            {jiraLink && (
+            {integration_Type === "Jira" && (
               <>
-                <span className="text-xs text-emerald-700 font-medium">Pushed ✓</span>
-                <a
-                  href={jiraLink}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-xs text-emerald-700 hover:underline"
-                >
-                  View Issue↗
-                </a>
+                {!pushing && !jiraLink && (
+                  <button
+                    onClick={pushToJira}
+                    className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs hover:bg-slate-50 transition"
+                  >
+                    Push to Jira
+                  </button>
+                )}
+
+                {pushing && !jiraLink && (
+                  <span className="text-xs text-slate-500">Pushing…</span>
+                )}
+
+                {jiraLink && (
+                  <>
+                    <span className="text-xs text-emerald-700 font-medium">Pushed ✓</span>
+                    <a
+                      href={jiraLink}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs text-emerald-700 hover:underline"
+                    >
+                      View Issue↗
+                    </a>
+                  </>
+                )}
               </>
             )}
+
+            {integration_Type === "Azure" && (
+              <>
+                {!pushing && !azureLink && (
+                  <button
+                  //  onClick={pushToAzure}
+                    className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs hover:bg-slate-50 transition"
+                  >
+                    Push to Azure
+                  </button>
+                )}
+
+                {pushing && !azureLink && (
+                  <span className="text-xs text-slate-500">Pushing…</span>
+                )}
+
+                {azureLink && (
+                  <>
+                    <span className="text-xs text-blue-700 font-medium">Pushed ✓</span>
+                    <a
+                      href={azureLink}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs text-blue-700 hover:underline"
+                    >
+                      View Work Item↗
+                    </a>
+                  </>
+                )}
+              </>
+            )}
+
+
 
 
             {/* Details toggle button */}
