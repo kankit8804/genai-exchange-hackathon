@@ -260,19 +260,22 @@ function DashboardInner() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 text-slate-800">
       {/* Top bar */}
-      <header className="sticky top-0 z-50 bg-[#0b1220] text-white shadow-[0_1px_0_rgba(255,255,255,0.06)]">
+      <header className="top-0 z-50 bg-[#0b1220] text-white shadow-[0_1px_0_rgba(255,255,255,0.06)]">
         <div className="mx-auto max-w-7xl px-4 py-4 flex items-center gap-4">
           <div className="leading-tight">
-            <h1 className="text-xl font-semibold text-white">
-              {/* Orbit AI — Test Case Generator */}
-              {projectName}
-            </h1>
-            {projectId && (
-              <div className="ml-4">
-                <ShareProjectModal projectId={projectId} />
-              </div>
-            )}
-            <p className="text-sm text-slate-300">{description}</p>
+            <span className="flex items-center gap-2">
+              <h1 className="text-xl font-semibold  text-white">
+                {/* Orbit AI — Test Case Generator */}
+                {projectName}
+              </h1>
+              {projectId && (
+                <div className="">
+                  <ShareProjectModal projectId={projectId} />
+                </div>
+              )}
+            </span>
+
+            <h2 className="mt-1 text-sm text-white-700">{pDescription}</h2>
           </div>
           <div className="ml-auto flex items-center gap-3">
             <span
@@ -441,11 +444,11 @@ function DashboardInner() {
           {/* NEW: ALM Integration card placed directly under Results */}
           {hasResults ? (
             <>
-              {integrationType === "Azure" && (
+              {integrationType === "Azure" || (
                 <ALMIntegration testCases={sorted} />
               )}
 
-              {integrationType === "Jira" && (
+              {integrationType === "Jira" || (
                 <PushAllToJira
                   testCases={sorted}
                   apiBase={API_BASE}

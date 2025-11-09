@@ -73,7 +73,7 @@ export default function HomePage() {
               </p>
               <div className="mt-6 flex flex-wrap gap-3">
                 <Link
-                  href="/project"
+                  href="/project/createnew"
                   className="rounded-lg bg-emerald-600 px-5 py-3 text-white font-medium shadow-sm hover:bg-emerald-700"
                 >
                   Create new project 
