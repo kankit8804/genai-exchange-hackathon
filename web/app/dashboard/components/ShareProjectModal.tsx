@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { getApiBase } from "@/utils/api";
+import { FaShare} from "react-icons/fa";
 
 export default function ShareProjectModal({
   projectId,
@@ -47,9 +48,10 @@ export default function ShareProjectModal({
       {/* --- Open Modal Button --- */}
       <button
         onClick={() => setShow(true)}
-        className="rounded-md bg-emerald-600 px-4 py-2 text-white text-sm font-medium hover:bg-emerald-700 transition"
+        className="rounded-md bg-emerald-600 px-2 py-1 text-white text-xs font-medium hover:bg-emerald-700 transition"
       >
-        Share Project
+        <FaShare className="mr-1 inline-block" />
+        Share
       </button>
 
       {show && (

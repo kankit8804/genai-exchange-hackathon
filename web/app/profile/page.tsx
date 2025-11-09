@@ -140,14 +140,14 @@ export default function ProfilePage() {
           {/* User Info Section */}
           <div className="mt-6 flex items-center gap-4 border-b border-slate-200 pb-6">
             <img
-              src={user.photoURL ?? "./public/default-avatar.png"}
+              src={user.photoURL ?? "/default-avatar.png"}
               alt="Profile"
               className="h-20 w-20 rounded-full border border-slate-300 object-cover"
             />
             <div className="flex-1">
               <div className="flex items-center gap-2">
                 <div className="text-lg font-medium text-slate-900">
-                  {user.displayName ?? "@UserName"}
+                  {user.displayName ?? "@Name"}
                 </div>
                 <button
                   onClick={() => setEditingName(!editingName)}
@@ -325,7 +325,7 @@ export default function ProfilePage() {
           <div className="mt-10 flex justify-end">
             <button
               onClick={logout}
-              className="rounded-md border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 text-emerald-600"
+              className="rounded-md bg-emerald-600 px-4 py-2 text-white text-sm font-medium hover:bg-emerald-700 transition"
             >
               Logout
             </button>

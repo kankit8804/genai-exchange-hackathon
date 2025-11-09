@@ -82,7 +82,7 @@ export default function Navbar() {
                       ? "scale-100 opacity-100 translate-y-0"
                       : "scale-95 opacity-0 -translate-y-2 pointer-events-none"
                     }`}
-                  style={{ position: "fixed" }}
+                  style={{ position: "absolute" }}
                 >
 
                   {/* Arrow */}
