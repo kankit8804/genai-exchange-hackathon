@@ -18,6 +18,7 @@ interface TestCase {
   isPushed?: boolean;
   trace_link?: string;
   createdAt?: string | number | Date;
+  project_id: string;
 }
 
 interface JiraResponse {
@@ -57,6 +58,8 @@ export const ResultItem = forwardRef<ResultItemHandle, Props>(
       setEdited((prev) => ({ ...prev, [field]: value }));
       setChanged(true);
     };
+    
+    {tc.trace_link && !jiraLink && setJiraLink(tc.trace_link);}
 
     const handleSaveEdit = async () => {
       try {
@@ -115,6 +118,7 @@ export const ResultItem = forwardRef<ResultItemHandle, Props>(
           steps: tc.steps,
           test_id: tc.test_id,
           req_id: tc.req_id,
+          project_id: tc.project_id,
         };
 
         const res = await fetch(`${apiBase}/push/jira`, {

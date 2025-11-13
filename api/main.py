@@ -471,18 +471,34 @@ def get_testcases_by_project(project_id: str):
     try:
         query = f"""
         SELECT 
-            test_id, 
-            req_id, 
-            title, 
-            severity, 
-            expected_result, 
-            steps, 
-            created_at, 
-            project_id,
-            source_excerpt,
-        FROM `{TABLE_TC}`
-        WHERE project_id = @pid
-        ORDER BY created_at DESC
+            tc.test_id, 
+            tc.req_id, 
+            tc.title, 
+            tc.severity, 
+            tc.expected_result, 
+            tc.steps, 
+            tc.created_at, 
+            tc.project_id,
+            tc.source_excerpt,
+
+            -- trace link table fields
+            tr.external_system,
+            tr.external_key,
+            tr.external_url AS trace_link,
+            tr.created_at AS trace_created_at,
+
+            -- computed field for UI: is_pushed
+            CASE
+                WHEN tr.external_url IS NOT NULL AND tr.external_url != '' THEN TRUE
+                ELSE FALSE
+            END AS is_pushed
+
+        FROM `{TABLE_TC}` AS tc
+        LEFT JOIN `{TABLE_TRL}` AS tr
+        ON tc.project_id = tr.project_id AND tc.test_id = tr.test_id
+
+        WHERE tc.project_id = @pid
+        ORDER BY tc.created_at DESC
         """
         job = get_bq().query(
             query,
@@ -503,6 +519,11 @@ def get_testcases_by_project(project_id: str):
                 "createdAt": row["created_at"],
                 "project_id": row["project_id"],
                 "source_excerpt": row["source_excerpt"],
+                "trace_link": row.get("trace_link"),
+                "external_system": row.get("external_system"),
+                "external_key": row.get("external_key"),
+                "trace_created_at": row.get("trace_created_at"),
+                "is_pushed": row.get("is_pushed", False),
             })
 
         return {"ok": True, "count": len(results), "test_cases": results}
@@ -521,6 +542,7 @@ class PushBody(BaseModel):
     jira_api_token: str
     jira_project_key: str
     jira_issue_type: str = "Task"  # optional default
+    project_id: str | None = None
 
 
 def build_adf_description(summary: str, steps: list[str] | None = None, expected: str | None = None):
@@ -563,53 +585,25 @@ def build_adf_description(summary: str, steps: list[str] | None = None, expected
 
     return adf
 
-def update_is_pushed_by_test_id(test_ids: Union[str, List[str]], is_pushed: bool):
-    """
-    Update the Is_pushed column in BigQuery for given test_id(s).
-    
-    Args:
-        test_ids: A single test_id string or a list of test_id strings.
-        is_pushed: Boolean value to set for the Is_pushed column.
-    """
-    client = get_bq()
-    table = TABLE_TC
 
-    # Normalize to list
-    if isinstance(test_ids, str):
-        test_ids = [test_ids]
-
-    if not test_ids:
-        raise HTTPException(400, "No test_id(s) provided for update.")
-
-    # Create safe IN clause
-    test_id_list = ", ".join([f"'{tid}'" for tid in test_ids])
-
-    query = f"""
-        UPDATE `{table}`
-        SET Is_pushed = @is_pushed
-        WHERE test_id IN ({test_id_list})
-    """
-
-    job_config = bigquery.QueryJobConfig(
-        query_parameters=[
-            bigquery.ScalarQueryParameter("is_pushed", "BOOL", is_pushed),
-        ]
-    )
-
-    try:
-        client.query(query, job_config=job_config).result()
-    except Exception as e:
-        raise HTTPException(500, f"BigQuery update failed: {e}")
-
-    return {
-        "updated_test_ids": test_ids,
-        "is_pushed": is_pushed,
-        "updated_count": len(test_ids),
-    }
+def save_trace_link(req_id: str, test_id: str, system: str, key: str, url: str, project_id: str):
+    rows = [{
+        "req_id": req_id,
+        "test_id": test_id,
+        "external_system": system,
+        "external_key": key,
+        "external_url": url,
+        "created_at": now_ts(),
+        "created_by": CREATED_BY,
+        "project_id": project_id,
+    }]
+    errs = get_bq().insert_rows_json(TABLE_TRL, rows)
+    if errs:
+        raise HTTPException(500, f"Trace insert failed: {errs}")
 
 @app.post("/push/jira")
 def push_jira(body: PushBody):
-    log.debug(f"Push to Jira called with: {body}")
+    #log.debug(f"Push to Jira called with: {body}")
     if not (body.jira_domain and body.jira_email and body.jira_api_token and body.jira_project_key):
         raise HTTPException(400, "Missing Jira credentials from request body")
 
@@ -646,7 +640,15 @@ def push_jira(body: PushBody):
     issue_key = data.get("key")
     issue_url = f"https://{jira_domain}/browse/{issue_key}"
 
-    # update_is_pushed_by_test_id(body.test_id, True)
+    
+    save_trace_link(
+        req_id=body.req_id or "",
+        test_id=body.test_id or "",
+        system="Jira",
+        key=issue_key,
+        url=issue_url,
+        project_id=body.project_id or "",
+    )   
 
     return {"ok": True, "external_key": issue_key, "external_url": issue_url}
 
