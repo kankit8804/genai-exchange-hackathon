@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { LastResult } from "@/utils/types";
-
+import { API_BASE } from "@/utils/api";
 interface Props {
   setResults: (data: LastResult) => void;
   showToast: (msg: string, type?: "ok" | "err") => void;
@@ -22,7 +22,7 @@ export default function FileUploader({ setResults, showToast }: Props) {
 
     setLoading(true);
     try {
-      const res = await fetch(`${"https://orbit-api-938180057345.us-central1.run.app"}/ingest`, {
+      const res = await fetch(`${API_BASE}/ingest`, {
         method: "POST",
         body: fd,
       });

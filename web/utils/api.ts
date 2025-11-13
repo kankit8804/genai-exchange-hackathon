@@ -1,6 +1,12 @@
 // utils/api.ts
 import type { LastResult, TestCase } from "./types";
 
+
+export const API_BASE =
+  (typeof window !== "undefined" && (window as any).API_BASE) ||
+  process.env.NEXT_PUBLIC_API_BASE_URL ||
+  "https://orbit-api-938180057345.us-central1.run.app/";
+
 // Minimal declaration for process.env to avoid Node types requirement
 declare const process: { env: Record<string, string | undefined> };
 
@@ -11,11 +17,7 @@ const sanitizeBase = (v?: string) => (v ?? "").replace(/^\uFEFF/, "").trim().rep
 // then window.API_BASE (set in layout.tsx), then fallback to default.
 const envBase = sanitizeBase(process?.env?.NEXT_PUBLIC_API_BASE_URL);
 const winBase = typeof window !== "undefined" ? sanitizeBase((window as any).API_BASE) : "";
-let API_BASE = envBase || winBase || "https://orbit-api-938180057345.us-central1.run.app";
 
-export const setApiBase = (url: string): void => {
-  API_BASE = url;
-};
 
 export const getApiBase = (): string => API_BASE;
 
@@ -90,3 +92,16 @@ export const post = async <T>(
 ): Promise<T> => {
   return postJson<T>(endpoint, payload);
 };
+
+
+export async function analyzeData() {
+  const res = await fetch(`${API_BASE}/analyze`);
+  if (!res.ok) throw new Error("Analyze request failed");
+  return res.json();
+}
+
+export async function generateData() {
+  const res = await fetch(`${API_BASE}/generate`, { method: "POST" });
+  if (!res.ok) throw new Error("Generate request failed");
+  return res.json();
+}

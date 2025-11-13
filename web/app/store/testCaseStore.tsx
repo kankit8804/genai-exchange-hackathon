@@ -1,6 +1,6 @@
 import { create } from "zustand";
+import { API_BASE } from "@/utils/api";
 
-const API_BASE = "https://orbit-api-938180057345.us-central1.run.app";
 
 export interface TestCase {
   test_id: string;
