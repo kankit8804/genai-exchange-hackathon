@@ -184,7 +184,7 @@ export default function HomePage() {
       </section>
 
       <footer className="py-8 text-center text-xs text-slate-500">
-        © Orbit AI — PoC
+        © Orbit AI
       </footer>
     </div>
   );

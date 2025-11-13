@@ -29,6 +29,7 @@ interface TestCase {
     isPushed?: boolean;
     isRemoved?: boolean;
     createdAt?: string | number | Date;
+    project_id: string;
 }
 
 interface Project {
