@@ -1,13 +1,6 @@
 // utils/api.ts
 import type { LastResult, TestCase } from "@/utils/api";
-
-let API_BASE = "https://orbit-api-938180057345.us-central1.run.app";
-
-export const setApiBase = (url: string): void => {
-  API_BASE = url;
-};
-
-export const getApiBase = (): string => API_BASE;
+import { API_BASE } from "@/utils/api";
 
 /**
  * Perform a health check to see if the API is online.
