@@ -24,16 +24,16 @@ import AddTestCaseModal from "../components/addTestCaseWidget";
 import { API_BASE } from "@/utils/api";
 
 interface TestCase {
-  req_id: string;
-  test_id: string;
-  title: string;
-  severity: string;
-  expected_result: string;
-  steps: string[];
-  isPushed?: boolean;
-  isRemoved?: boolean;
-  createdAt?: string | number | Date;
-  project_id: string;
+    req_id: string;
+    test_id: string;
+    title: string;
+    severity: string;
+    expected_result: string;
+    steps: string[];
+    isPushed?: boolean;
+    isRemoved?: boolean;
+    createdAt?: string | number | Date;
+    project_id: string;
 }
 
 interface Project {
